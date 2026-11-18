@@ -94,3 +94,32 @@
  .latest-report{margin-top:0;padding-top:6px}
  .command-bar button{min-height:53px}
 }
+
+/* V4: large live world, accessible motion control and cinematic handset crop. */
+.motion-toggle {flex:none;border:1px solid #655c4e;color:#e2cfad;background:#242d27;
+  min-width:112px;min-height:44px;padding:8px 12px;font:600 11px var(--mono);letter-spacing:.03em;cursor:pointer;}
+.motion-toggle[aria-pressed="true"] {border-color:#dba16d;color:#ffe5b4;background:#3b2f28;}
+.motion-toggle:hover {background:#354238;}
+.landscape {position:relative;isolation:isolate;overflow:hidden;}
+.landscape canvas, .poster-frame canvas {display:block;object-fit:cover;object-position:center;}
+@media (max-width: 650px) {
+  .masthead {gap:6px;}
+  .motion-toggle {min-width:97px;min-height:44px;padding:7px 9px;font-size:10px;}
+  .landscape canvas {width:100%;height:clamp(275px,77vw,390px);object-fit:cover;object-position:57% center;}
+  .poster-frame canvas {width:100%;height:clamp(250px,73vw,390px);object-fit:cover;object-position:57% center;}
+  .landscape-credit {position:absolute;bottom:0;left:0;right:0;}
+}
+@media (max-width: 360px) {
+  .motion-toggle {min-width:86px;font-size:9px;}
+  .landscape canvas {height:280px;}
+}
+@media (prefers-reduced-motion: reduce) {
+  .landscape canvas, .poster-frame canvas {transition:none;}
+}
+
+@media (max-width:650px){.landscape canvas.is-encounter{object-position:38% center;}}
+@media (max-width:360px) {
+  .masthead {padding-inline:10px;}
+  .masthead .brand {font-size:21px;letter-spacing:0;}
+  .motion-toggle {min-width:82px;padding-inline:6px;}
+}

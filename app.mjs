@@ -1,11 +1,15 @@
 import {act,newGame,getEvent,getLandmark,getScore,getPrice,getChoiceForecast,validateSave,LANDMARKS,GOODS,DESTINATION,MAX_DAYS} from './engine.mjs';
 import {ROLES} from './story.mjs';
-import {drawScene} from './scene.mjs';
+import {drawScene,getSceneState,sceneDescription} from './scene.mjs';
 
 const $=id=>document.getElementById(id);
 const html=s=>String(s).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-const KEY='westward2048.save.v1',BEST_KEY='westward2048.best.v1',SOUND_KEY='westward2048.sound';
-let state=null,lastFrame=0,lastModal='',soundEnabled=false,audioContext=null;
+const KEY='westward2048.save.v1',BEST_KEY='westward2048.best.v1',SOUND_KEY='westward2048.sound',MOTION_KEY='westward2048.motionPaused';
+let state=null,lastModal='',soundEnabled=false,audioContext=null;
+let sceneClock=0,frameId=0,previousTick=null,lastPaint=-Infinity,visualPhase='',phaseDeadline=0;
+const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)');
+let motionPaused=false;
+try{motionPaused=localStorage.getItem(MOTION_KEY)==='true';}catch{}
 try{soundEnabled=localStorage.getItem(SOUND_KEY)==='true';}catch{}
 const save=()=>{try{if(state)localStorage.setItem(KEY,JSON.stringify(state));}catch{}};
 const loaded=()=>{try{const s=JSON.parse(localStorage.getItem(KEY));return validateSave(s)?s:null;}catch{return null;}};
@@ -29,13 +33,15 @@ function cue(kind='move'){
   }catch{} // No sound device should never break gameplay.
 }
 function persistBest(){if(!state?.end)return;try{localStorage.setItem(BEST_KEY,String(Math.max(Number(localStorage.getItem(BEST_KEY))||0,getScore(state))));}catch{}}
-function play(s){state=s;$('welcome').hidden=true;$('game').hidden=false;document.body.classList.add('is-playing');render();window.scrollTo({top:0,behavior:'instant'});}
+function play(s){state=s;visualPhase='';$('welcome').hidden=true;$('game').hidden=false;document.body.classList.add('is-playing');render();syncAnimation();window.scrollTo({top:0,behavior:'instant'});}
 function start(){const name=$('callsign').value||'The Last Convoy';play(newGame({callsign:name,difficulty:$('difficulty').value}));save();cue('reward');}
 function update(action,payload={}){
   if(!state)return;
   const before=state,after=act(before,action,payload);
   if(after===before)return;
-  state=after;save();persistBest();render();
+  state=after;save();persistBest();
+  visualPhase=after.pending!==null||after.end?'':({travel:'travel',rest:'camp',scavenge:'scavenge',repair:'repair'}[action]||'');
+  phaseDeadline=performance.now()+1850;render();
   if(before.pending===null && after.pending!==null && window.matchMedia('(max-width: 840px)').matches){requestAnimationFrame(()=>$('decision').scrollIntoView({block:'start',behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'}));}
   if(after.end==='lost'||after.crew.some((c,i)=>before.crew[i].health>0&&c.health===0))cue('danger');
   else if(after.end==='won'||action==='scavenge'||action==='buy')cue('reward');
@@ -95,12 +101,15 @@ function render(){if(!state)return;const s=state,{current,next}=getLandmark(s.di
   $('progress-bar').style.width=`${s.distance/DESTINATION*100}%`;
   $('road-progress').setAttribute('aria-valuenow',String(Math.floor(s.distance)));
   $('landmark').textContent=current.name.toUpperCase();
-  $('weather').textContent=next?`${next.name.toUpperCase()} · ${Math.ceil(next.mile-s.distance)} MI`:'THE LIGHTS OF HAVEN';
+  const atmosphere=getSceneState(s);
+  $('weather').textContent=`${atmosphere.time.toUpperCase()} / ${atmosphere.weather.toUpperCase()}${next?` · ${Math.ceil(next.mile-s.distance)} MI TO ${next.name.toUpperCase()}`:' · HAVEN'}`;
+  $('scene').setAttribute('aria-label',sceneDescription(s));
+  $('scene').classList.toggle('is-encounter',s.pending!==null);
   $('resources').innerHTML=vitals(s);$('broadcast').textContent=s.broadcast||'The receiver hisses. Nobody is listening.';
   $('pace').value=s.pace;$('ration').value=s.ration;
-  renderDecision(s);drawScene($('scene'),s,0);
+  renderDecision(s);renderStage();
 }
-function reset(){if(!window.confirm('Leave this run behind? The current save will be lost.'))return;clear();state=null;document.body.classList.remove('is-playing');$('game').hidden=true;$('welcome').hidden=false;$('continue').hidden=true;window.scrollTo({top:0,behavior:'instant'});}
+function reset(){if(!window.confirm('Leave this run behind? The current save will be lost.'))return;clear();state=null;visualPhase='';document.body.classList.remove('is-playing');$('game').hidden=true;$('welcome').hidden=false;$('continue').hidden=true;renderStage();syncAnimation();window.scrollTo({top:0,behavior:'instant'});}
 function openPanel(panel){if(!state)return;lastModal=panel;renderDialog(panel);$('tool-dialog').showModal();}
 function renderDialog(panel){if(!state)return;const s=state;
   const titles={crew:'THE CREW',map:'ROAD ATLAS',trade:'ROADSIDE TRADER',journal:'THE JOURNAL',radio:'SHORTWAVE RADIO'};
@@ -121,8 +130,43 @@ function renderDialog(panel){if(!state)return;const s=state;
   }
   $('dialog-content').innerHTML=body;
 }
-function animate(t){if(!document.hidden&&t-lastFrame>110){lastFrame=t;const s=state||{distance:30,day:1};const c=state?$('scene'):$('intro-canvas');drawScene(c,s,t);}requestAnimationFrame(animate);}
-const reduce=window.matchMedia('(prefers-reduced-motion: reduce)');if(!reduce.matches)requestAnimationFrame(animate);
+// Motion is user-controlled, respects the OS preference, and stops in background tabs.
+// An idle scene remains useful even when animation is paused or unavailable.
+function renderStage(){
+  const canvas=state?$('scene'):$('intro-canvas');
+  const game=state||{distance:30,day:1,seed:18,condition:92,pace:'steady'};
+  const activePhase=state&&visualPhase&&performance.now()<phaseDeadline?visualPhase:'';
+  drawScene(canvas,game,sceneClock,activePhase);
+}
+function motionAllowed(){return !motionPaused&&!reducedMotion.matches&&!document.hidden;}
+function tick(t){
+  frameId=0;
+  if(!motionAllowed())return;
+  if(previousTick!==null){sceneClock+=Math.min(t-previousTick,64);}
+  previousTick=t;
+  // Pixel animation is intentionally capped near 24 fps for phones and battery life.
+  if(t-lastPaint>=40){lastPaint=t;renderStage();}
+  frameId=requestAnimationFrame(tick);
+}
+function syncAnimation(){
+  const button=$('motion-toggle');
+  button.setAttribute('aria-pressed',String(motionPaused||reducedMotion.matches));
+  button.disabled=reducedMotion.matches;
+  button.textContent=reducedMotion.matches?'MOTION OFF':motionPaused?'PLAY SCENE':'PAUSE SCENE';
+  button.title=reducedMotion.matches?'System reduced-motion preference keeps animation off':motionPaused?'Resume ambient world animation':'Pause ambient world animation';
+  if(!motionAllowed()){
+    if(frameId)cancelAnimationFrame(frameId);
+    frameId=0;previousTick=null;renderStage();
+  }else if(!frameId){previousTick=null;frameId=requestAnimationFrame(tick);}
+}
+$('motion-toggle').addEventListener('click',()=>{
+  motionPaused=!motionPaused;
+  try{localStorage.setItem(MOTION_KEY,String(motionPaused));}catch{}
+  syncAnimation();
+});
+reducedMotion.addEventListener?.('change',syncAnimation);
+document.addEventListener('visibilitychange',syncAnimation);
+
 $('start').addEventListener('click',start);
 $('continue').addEventListener('click',()=>{const s=loaded();if(s)play(s);});
 $('new-run').addEventListener('click',reset);
@@ -152,4 +196,4 @@ document.addEventListener('keydown',e=>{
     if(button){button.click();e.preventDefault();}
   }
 });
-$('continue').hidden=!loaded();drawScene($('intro-canvas'),{distance:30,day:1},0);
+$('continue').hidden=!loaded();renderStage();syncAnimation();
