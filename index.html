@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#101914">
+  <meta name="description" content="Westward: 2048 — a free retro post-apocalyptic survival journey. Five survivors, one battered vehicle, 1,250 miles to Haven.">
+  <title>WESTWARD: 2048 — The world ended. The journey didn't.</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="app.mjs"></script>
+</head>
+<body>
+  <header class="topbar"><div class="brand">WESTWARD<span class="accent">:</span>2048</div><div class="tiny">AN ORIGINAL SURVIVAL JOURNEY <span class="signal">◉ SIGNAL LOST</span></div></header>
+  <main id="app">
+    <section id="welcome" class="welcome">
+      <div class="welcome-inner">
+        <p class="eyebrow">SYSTEM TRANSMISSION // 08.17.2048</p>
+        <h1>THE WORLD ENDED.<br><em>THE JOURNEY DIDN'T.</em></h1>
+        <p class="intro">Civilization stopped answering. Five people. One failing truck. A rumour of safety 1,250 miles west. Make every mile count.</p>
+        <div class="intro-controls">
+          <label for="callsign">CONVOY NAME</label><input id="callsign" maxlength="28" value="The Last Convoy" autocomplete="off">
+          <label for="difficulty">DIFFICULTY</label><select id="difficulty"><option value="normal">SURVIVOR — A hard road</option><option value="hard">WASTELAND — No mercy</option></select>
+          <button id="start" class="button primary">BEGIN THE JOURNEY <span aria-hidden="true">→</span></button>
+          <button id="continue" class="button secondary" hidden>RESUME SAVED JOURNEY</button>
+        </div>
+        <p class="micro">FREE TO PLAY • AUTOSAVES LOCALLY • NO ACCOUNT REQUIRED</p>
+      </div>
+      <div class="welcome-art"><canvas id="intro-canvas" width="640" height="340" aria-label="Pixel art of a lonely truck crossing a post-apocalyptic valley" role="img"></canvas><div class="art-caption">THE ROAD WEST // EST. 2048</div></div>
+    </section>
+    <section id="game" class="game" hidden>
+      <div class="hud"><div><span class="eyebrow">YOUR CONVOY</span><h2 id="convoy-name"></h2></div><div class="hud-right"><span id="day">DAY 01</span><span id="survivors">05 SURVIVORS</span><button id="new-run" class="text-button" title="Start over">NEW RUN</button></div></div>
+      <div class="progress-head"><span id="location">THE DEPARTURE</span><span id="distance">0 / 1,250 MI</span></div>
+      <div class="progress"><div id="progress-bar"></div></div>
+      <div class="play-layout">
+        <div class="play-main">
+          <div class="world"><canvas id="scene" width="720" height="300" aria-label="Retro pixel art of your truck on the road" role="img"></canvas><div class="world-overlay"><span id="landmark">THE DEPARTURE</span><span id="weather">THE LONG ROAD WEST</span></div></div>
+          <div id="encounter" class="encounter" hidden aria-live="polite"><span class="eyebrow">INCOMING TRANSMISSION // DECISION REQUIRED</span><h3 id="event-title"></h3><p id="event-text"></p><div id="event-choices" class="choice-list"></div></div>
+          <div id="ending" class="ending" hidden aria-live="polite"><p class="eyebrow">JOURNEY COMPLETE</p><h3 id="ending-title"></h3><p id="ending-message"></p><p id="ending-score"></p><button id="again" class="button primary">TRY ANOTHER RUN →</button></div>
+          <div id="actions" class="actions-panel"><div class="panel-head"><h3>YOUR NEXT MOVE</h3><span>EVERY CHOICE COSTS SOMETHING</span></div><div class="actions-grid"><button data-act="travel" class="action travel"><strong>DRIVE WEST →</strong><small>Advance toward Haven</small></button><button data-act="scavenge" class="action"><strong>SCAVENGE</strong><small>Search for supplies • 1 day</small></button><button data-act="rest" class="action"><strong>MAKE CAMP</strong><small>Recover health • 2 days</small></button><button data-act="repair" class="action"><strong>REPAIR</strong><small>Spend 1 part • 1 day</small></button><button data-act="heal" class="action"><strong>USE MEDICINE</strong><small>Spend 1 medical kit</small></button></div><div class="setting-grid"><label>TRAVEL PACE<select id="pace"><option value="cautious">CAUTIOUS — Slow, safe</option><option value="steady">STEADY — Balanced</option><option value="rush">PUSH HARD — Fast, risky</option></select></label><label>FOOD RATIONS<select id="ration"><option value="full">FULL — Better spirits</option><option value="lean">LEAN — Balanced</option><option value="scarce">SCARCE — Save supplies</option></select></label></div></div>
+          <section class="log-panel"><div class="panel-head"><h3>THE JOURNEY LOG</h3><span>LAST REPORTS</span></div><ol id="log" aria-live="polite"></ol></section>
+        </div>
+        <aside class="sidebar"><section class="side-panel"><div class="panel-head"><h3>SUPPLIES</h3><span>LIVE STATUS</span></div><div id="resources" class="resources"></div></section><section class="side-panel"><div class="panel-head"><h3>CREW</h3><span>KEEP THEM ALIVE</span></div><div id="crew"></div></section><section class="side-panel"><div class="panel-head"><h3>THE TRADER</h3><span>ROAD EXCHANGE</span></div><p class="trade-note">Credits: <strong id="credits">0</strong> · Supply prices never change.</p><div id="shop"></div></section><section class="side-panel map-panel"><div class="panel-head"><h3>ROUTE INTEL</h3><span>1,250 MILES</span></div><div id="route"></div></section></aside>
+      </div>
+    </section>
+  </main>
+  <footer>WESTWARD: 2048 <span>—</span> THE WORLD ENDED. THE JOURNEY DIDN'T. <span>•</span> ORIGINAL GAMEPLAY & ART</footer>
+</body>
+</html>
