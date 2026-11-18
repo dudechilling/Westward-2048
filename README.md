@@ -1,21 +1,47 @@
-# Westward: 2048
+# WESTWARD: 2048
 
-A browser-based, original pixel-art survival journey set in a post-collapse North America.
+**The world ended. The journey didn't.**
 
-This repository is being built as a dependency-free static web game. Game artwork, narrative, and source code are original to this project; no code, text, or assets from *The Oregon Trail* are redistributed.
+An original, free browser survival game inspired by the decisions and difficulty of classic overland journey games. In 2048, five survivors travel 1,250 miles through a collapsed North America toward a rumoured safe settlement called Haven.
 
-## Run locally
+## Play
 
-Serve the repository with a static HTTP server, for example `python3 -m http.server 8000`, and open `http://localhost:8000`.
+This is a static website. Serve the repository with an HTTP server:
 
-## Tests
+```sh
+python3 -m http.server 8000
+```
 
-Run `npm test` (Node.js 20 or later). No dependency installation is necessary.
+Open `http://localhost:8000`, enter a convoy name, select a difficulty and choose **Begin the Journey**. Do not open `index.html` directly with `file://`: browser module imports require an HTTP server.
+
+## Game features
+
+- Original retro-style canvas scenery and responsive desktop/mobile layout
+- Route landmarks, randomized encounters and two-way consequential decisions
+- Five survivors with health, morale and permanent losses
+- Fuel, food, water, medicine, spare parts, vehicle condition and credits
+- Adjustable travel pace and food rationing
+- Scavenging, resting, repairs, medicine and roadside trading
+- Two difficulty levels, victory and defeat states, and local best scores
+- Autosave to browser localStorage; no login, account or backend
+- Deterministic random seeds for testable game mechanics
+
+## Development
+
+Requires Node.js 20 or later. No `npm install` is necessary.
+
+```sh
+npm test
+```
+
+The source consists of `index.html` (interface), `style.css` (visual design), `app.mjs` (browser controller and pixel scenery) and `engine.mjs` (simulation). Unit tests and seed-based playthrough checks are in `engine.test.mjs`.
 
 ## Hosting
 
-Deploy this directory as a static site with Cloudflare Pages. Advertising is not integrated; ad networks generally require an approved domain and account before ad code can be added.
+Deploy the repository root as a **static website** on Cloudflare Pages (no build command and no output folder) or a similar host. No server-side services are needed. The repository has **not** been deployed to a live game domain.
 
-## Rights
+Advertising is **not** implemented. Add an approved ad provider only after the site has real original content, appropriate legal/privacy pages, suitable placements away from interactive controls, and approval from the provider. Do not assume ad revenue without actual traffic.
 
-Copyright and licensing decisions for original project content have not yet been made. No open-source licence is granted by default.
+## Intellectual property
+
+The game code, narrative, rules and procedural visual art were created for this project. No original *Oregon Trail* game code, text, graphics or audio is redistributed. This repository currently has **no open-source licence** for its own code; choose a licence explicitly before accepting outside contributions or granting reuse rights.
