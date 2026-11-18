@@ -1,77 +1,155 @@
-import {newGame,act,getEvent,getLandmark,getScore,validateSave,LANDMARKS,DESTINATION,GOODS} from './engine.mjs';
+import {act,newGame,getEvent,getLandmark,getScore,getPrice,getChoiceForecast,validateSave,LANDMARKS,GOODS,DESTINATION,MAX_DAYS} from './engine.mjs';
+import {ROLES} from './story.mjs';
+import {drawScene} from './scene.mjs';
+
 const $=id=>document.getElementById(id);
-const esc=value=>String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-const SAVE='westward2048.save.v1',BEST='westward2048.best.v1';
-let state=null;
-function load(){try{const value=JSON.parse(localStorage.getItem(SAVE));return validateSave(value)?value:null;}catch{return null;}}
-function save(){try{localStorage.setItem(SAVE,JSON.stringify(state));}catch{}}
-function clearSave(){try{localStorage.removeItem(SAVE);}catch{}}
-function persistBest(){if(!state.end)return;try{const best=Number(localStorage.getItem(BEST))||0;if(getScore(state)>best)localStorage.setItem(BEST,String(getScore(state)));}catch{}}
-function play(s){state=s;document.body.classList.add('is-playing');$('welcome').hidden=true;$('game').hidden=false;render();window.scrollTo({top:0,behavior:'auto'});}
-function update(action,payload){state=act(state,action,payload);save();persistBest();render();}
-function start(){play(newGame({callsign:$('callsign').value,difficulty:$('difficulty').value}));save();}
-function render(){
-if(!state)return;
-const s=state;const living=s.crew.filter(x=>x.health>0).length;
-$('convoy-name').textContent=s.callsign;
-$('day').textContent=`DAY ${String(s.day).padStart(2,'0')} / 68`;
-$('survivors').textContent=`${String(living).padStart(2,'0')} SURVIVORS`;
-$('distance').textContent=`${Math.floor(s.distance).toLocaleString()} / ${DESTINATION.toLocaleString()} MI`;
-$('progress-bar').style.width=`${100*s.distance/DESTINATION}%`;
-const {current,next}=getLandmark(s.distance);
-$('location').textContent=next?`NEXT: ${next.name.toUpperCase()} · ${Math.ceil(next.mile-s.distance)} MI`:'HAVEN REACHED';
-$('landmark').textContent=current.name.toUpperCase();
-$('weather').textContent=s.distance>900?'THE MOUNTAIN PASS':s.distance>500?'ASH AND SILENCE':'THE LONG ROAD WEST';
-$('pace').value=s.pace;$('ration').value=s.ration;
-$('resources').innerHTML=[['food','RATIONS',100],['water','WATER',100],['fuel','FUEL',115],['parts','SPARE PARTS',8],['medicine','MED KITS',5],['condition','VEHICLE',100],['morale','MORALE',100]].map(([key,label,max])=>`<div class="resource ${s[key]<max*.2?'critical':s[key]<max*.4?'low':''} ${key==='condition'?'resource-wide':''}"><span>${label}</span><strong>${s[key]}${['condition','morale'].includes(key)?'%':''}</strong>${['condition','morale'].includes(key)?`<div class="meter"><div style="width:${s[key]}%"></div></div>`:''}</div>`).join('');
-$('crew').innerHTML=s.crew.map(person=>`<div class="crew-row"><strong>${esc(person.name)}</strong><span class="${person.health===0?'dead':person.health<50?'hurt':''}">${person.health===0?'LOST':person.health+'% HEALTH'}</span></div>`).join('');
-$('credits').textContent=s.credits;
-$('shop').innerHTML=Object.entries(GOODS).map(([key,g])=>`<div class="shop-row"><span>${esc(g.label)}<small>+${g.amount} UNITS</small></span><button data-buy="${key}" ${s.credits<g.price||s.end||s.pending!==null?'disabled':''}>${g.price} CR · BUY</button></div>`).join('');
-$('route').innerHTML=LANDMARKS.map(place=>`<div class="route-row ${s.distance>=place.mile?'visited':next===place?'next':''}"><span>${s.distance>=place.mile?'◆':next===place?'◇':'·'} ${esc(place.name)}</span><span>${place.mile} MI</span></div>`).join('');
-  $('latest-report').textContent=s.log[0]?`DAY ${String(s.log[0].day).padStart(2,'0')} // ${s.log[0].message}`:'';
-$('log').innerHTML=s.log.slice(0,15).map(item=>`<li><time>DAY ${String(item.day).padStart(2,'0')}</time><span class="${item.type}">${esc(item.message)}</span></li>`).join('');
-const e=getEvent(s);$('encounter').hidden=!e;$('actions').hidden=!!e||!!s.end;$('ending').hidden=!s.end;
-if(e){$('event-title').textContent=e.title;$('event-text').textContent=e.text;$('event-choices').innerHTML=e.choices.map((ch,i)=>`<button data-choice="${i}">${esc(ch.label)} →</button>`).join('');}
-if(s.end){$('ending-title').textContent=s.end==='won'?'YOU REACHED HAVEN.':'THE ROAD ENDS HERE.';$('ending-message').textContent=s.endReason;$('ending-score').textContent=`FINAL SCORE: ${getScore(s).toLocaleString()} · ${living} SURVIVORS · ${Math.floor(s.distance)} MILES`;}
-drawScene($('scene'),s.distance,s.day,s.end==='won');
+const html=s=>String(s).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+const KEY='westward2048.save.v1',BEST_KEY='westward2048.best.v1',SOUND_KEY='westward2048.sound';
+let state=null,lastFrame=0,lastModal='',soundEnabled=false,audioContext=null;
+try{soundEnabled=localStorage.getItem(SOUND_KEY)==='true';}catch{}
+const save=()=>{try{if(state)localStorage.setItem(KEY,JSON.stringify(state));}catch{}};
+const loaded=()=>{try{const s=JSON.parse(localStorage.getItem(KEY));return validateSave(s)?s:null;}catch{return null;}};
+const clear=()=>{try{localStorage.removeItem(KEY);}catch{}};
+function cue(kind='move'){
+  if(!soundEnabled)return;
+  try{
+    audioContext ||=new (window.AudioContext||window.webkitAudioContext)();
+    if(audioContext.state==='suspended')audioContext.resume();
+    const now=audioContext.currentTime;
+    const notes=kind==='danger'?[220,155]:kind==='reward'?[330,440,554]:[230,280];
+    for(let i=0;i<notes.length;i++){
+      const osc=audioContext.createOscillator(),gain=audioContext.createGain();
+      osc.type='square';osc.frequency.setValueAtTime(notes[i],now+i*.09);
+      gain.gain.setValueAtTime(0.0001,now+i*.09);
+      gain.gain.exponentialRampToValueAtTime(.04,now+i*.09+.015);
+      gain.gain.exponentialRampToValueAtTime(.0001,now+i*.09+.08);
+      osc.connect(gain);gain.connect(audioContext.destination);
+      osc.start(now+i*.09);osc.stop(now+i*.09+.09);
+    }
+  }catch{} // No sound device should never break gameplay.
 }
-function drawScene(canvas,miles=0,day=1,won=false){
-const ctx=canvas.getContext('2d');if(!ctx)return;ctx.imageSmoothingEnabled=false;const w=canvas.width,h=canvas.height;
-const sky=ctx.createLinearGradient(0,0,0,h);sky.addColorStop(0,won?'#23483b':'#253b34');sky.addColorStop(1,won?'#a3aa68':'#9b775a');ctx.fillStyle=sky;ctx.fillRect(0,0,w,h);
-const px=(x,y,ww,hh,col)=>{ctx.fillStyle=col;ctx.fillRect(Math.round(x),Math.round(y),Math.round(ww),Math.round(hh));};
-px(520,58,48,48,won?'#f2d68f':'#df9e6a');
-for(let i=0;i<13;i++){const x=i*75-55;const ht=40+((i*31+Math.floor(miles/23))%60);px(x,172-ht,55,ht,'#456358');px(x+12,166-ht,8,9,'#263d38');}
-ctx.fillStyle='#364d43';ctx.beginPath();ctx.moveTo(0,182);for(let i=0;i<11;i++)ctx.lineTo(i*80,125+(i*29%72));ctx.lineTo(w,240);ctx.lineTo(0,240);ctx.fill();
-for(let i=0;i<8;i++){const x=i*107-10-(miles%28);const ht=20+(i*13%48);px(x,191-ht,7,ht,'#263b36');px(x-10,191-ht,28,5,'#263b36');px(x+3,176-ht,5,13,'#263b36');}
-px(0,212,w,88,'#3c3c30');px(0,247,w,53,'#494539');
-for(let i=0;i<9;i++)px(i*105+(miles*3%65)-50,267,53,4,'#b6a17b');
-const x=265,y=187+Math.round(Math.sin(day*.5)*2);
-px(x+25,y-28,117,47,'#333f34');px(x+41,y-46,72,23,'#536557');px(x+47,y-40,33,14,'#a6af8a');px(x+85,y-40,21,14,'#a6af8a');
-px(x+19,y+9,131,17,'#202923');px(x+31,y+22,24,24,'#151c1b');px(x+112,y+22,24,24,'#151c1b');px(x+37,y+27,12,12,'#899078');px(x+118,y+27,12,12,'#899078');px(x+137,y-15,12,13,'#d3a26e');px(x+7,y+2,14,11,'#c68561');px(x+55,y-51,3,6,'#141e1c');
-for(let i=0;i<5;i++)px(x-15-i*22,y+22+(i%2)*9,10,3,'#8f7d61');
-if(won){px(580,120,8,80,'#d2e1a7');px(550,113,70,9,'#d2e1a7');}
-ctx.fillStyle='#f2f0d5';ctx.font='700 13px monospace';ctx.fillText(`WESTWARD // ${Math.floor(miles)} MI`,20,25);ctx.fillStyle='#d5c8a8';ctx.font='11px monospace';ctx.fillText(`TRANSMISSION ${String(day).padStart(2,'0')}`,20,44);
+function persistBest(){if(!state?.end)return;try{localStorage.setItem(BEST_KEY,String(Math.max(Number(localStorage.getItem(BEST_KEY))||0,getScore(state))));}catch{}}
+function play(s){state=s;$('welcome').hidden=true;$('game').hidden=false;document.body.classList.add('is-playing');render();window.scrollTo({top:0,behavior:'instant'});}
+function start(){const name=$('callsign').value||'The Last Convoy';play(newGame({callsign:name,difficulty:$('difficulty').value}));save();cue('reward');}
+function update(action,payload={}){
+  if(!state)return;
+  const before=state,after=act(before,action,payload);
+  if(after===before)return;
+  state=after;save();persistBest();render();
+  if(before.pending===null && after.pending!==null && window.matchMedia('(max-width: 840px)').matches){requestAnimationFrame(()=>$('decision').scrollIntoView({block:'start',behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'}));}
+  if(after.end==='lost'||after.crew.some((c,i)=>before.crew[i].health>0&&c.health===0))cue('danger');
+  else if(after.end==='won'||action==='scavenge'||action==='buy')cue('reward');
+  else if(action!=='pace'&&action!=='ration')cue();
+  if($('tool-dialog').open&&lastModal)renderDialog(lastModal);
 }
+function vitals(s){
+  const values=[['RATIONS',s.food,65],['WATER',s.water,55],['FUEL',s.fuel,40],['PARTS',s.parts,1],['TRUCK',`${s.condition}%`,30,s.condition],['MORALE',`${s.morale}%`,30,s.morale]];
+  return values.map(([label,value,low,number=value])=>`<div class="vital" data-status="${number<=low/2?'critical':number<=low?'low':'ok'}"><span class="vital-label">${label}</span><strong>${html(value)}</strong></div>`).join('');
+}
+const effects={distance:'MILES',food:'RATIONS',water:'WATER',fuel:'FUEL',parts:'PARTS',medicine:'MEDS',credits:'CREDITS',condition:'TRUCK',morale:'MORALE',health:'CREW HP',day:'DAYS'};
+function forecast(effect){return Object.entries(effect).map(([k,v])=>`${v>0?'+':''}${v} ${effects[k]||k.toUpperCase()}`).join(' · ');}
+function option({index,label,sub='',type='act',action='',risky=false}){
+  return `<button type="button" class="decision-option ${risky?'danger':''}" data-${type}="${html(type==='choice'?index:action)}" aria-keyshortcuts="${index+1}"><span class="option-main"><span class="number">${index+1}</span><span class="label">${html(label)}</span></span>${sub?`<span class="forecast">${html(sub)}</span>`:''}</button>`;
+}
+function renderDecision(s){
+  const event=getEvent(s),ending=!!s.end;
+  $('decision-count').textContent=`DAY ${String(s.day).padStart(2,'0')} / ${MAX_DAYS}`;
+  $('travel-settings').hidden=!!event||ending;
+  $('decision').classList.toggle('open-road',!event&&!ending);
+  const opts=$('decision-options');
+  if(event){
+    $('decision-kind').textContent=event.kind==='checkpoint'?'THE ROAD / CHECKPOINT':'THE ROAD / '+event.kind.toUpperCase();
+    $('decision-kicker').textContent=event.kind==='checkpoint'?'A PLACE YOU CANNOT AVOID':'YOUR NEXT BAD DECISION';
+    $('decision-title').textContent=event.title;
+    $('decision-copy').textContent=event.text;
+    opts.className='decision-options choices-mode';
+    opts.innerHTML=event.choices.map((choice,index)=>{
+      const p=getChoiceForecast(s,choice);
+      const prefix=!p.affordable?`NOT ENOUGH: ${p.missing.join(', ')}. PLAN FAILS · `:'';
+      return option({index,label:choice.label,sub:prefix+forecast(choice.effect),type:'choice',risky:!p.affordable});
+    }).join('');
+  }else if(ending){
+    $('decision-kind').textContent=s.end==='won'?'THE END / SOMEHOW ALIVE':'THE END / NO REFUNDS';
+    $('decision-kicker').textContent=s.end==='won'?'WELL, SHIT. YOU MADE IT.':'THE ROAD ALWAYS WINS EVENTUALLY';
+    $('decision-title').textContent=s.end==='won'?'HAVEN. AT LAST.':'THE LAST MILE.';
+    $('decision-copy').textContent=s.endReason+` Score: ${getScore(s).toLocaleString('en-CA')}.`;
+    opts.className='decision-options choices-mode';
+    opts.innerHTML='<button type="button" class="decision-option" data-reset="true"><span class="option-main"><span class="number">↺</span><span class="label">TRY ANOTHER RUN</span></span><span class="forecast">NO GUARANTEES</span></button>';
+  }else{
+    const {current,next}=getLandmark(s.distance);
+    $('decision-kind').textContent='THE ROAD / OPEN';
+    $('decision-kicker').textContent='YOUR MOVE, COMMANDER';
+    $('decision-title').textContent=s.distance>850?'DON’T DIE NOW.':s.distance>450?'KEEP THE ENGINE ALIVE.':'GO WEST. STAY BREATHING.';
+    $('decision-copy').textContent=next?`${current.description} ${Math.ceil(next.mile-s.distance)} miles until ${next.name}. Every day costs supplies; every detour costs something worse.`:'Haven is on the horizon.';
+    opts.className='decision-options actions-mode';
+    const actions=[['DRIVE WEST','2 days · fuel and wear','travel'],['SCAVENGE','1 day · risk of injury','scavenge'],['MAKE CAMP','2 days · recover health','rest'],['REPAIR THE TRUCK','1 part · 1 day','repair'],['USE MEDICINE','1 kit · crew health','heal']];
+    opts.innerHTML=actions.map(([label,sub,action],index)=>option({index,label,sub,type:'act',action})).join('');
+  }
+  $('latest-report').textContent=s.lastReport||s.log?.[0]?.message||'The road says nothing.';
+}
+function render(){if(!state)return;const s=state,{current,next}=getLandmark(s.distance);
+  $('convoy-name').textContent=s.callsign;$('chapter').textContent=current.name.toUpperCase();
+  $('day').textContent=`${String(s.day).padStart(2,'0')} / ${MAX_DAYS}`;
+  $('distance').textContent=`${Math.floor(s.distance).toLocaleString('en-CA')} / ${DESTINATION.toLocaleString('en-CA')}`;
+  $('survivors').textContent=`${s.crew.filter(c=>c.health>0).length} / ${s.crew.length}`;
+  $('progress-bar').style.width=`${s.distance/DESTINATION*100}%`;
+  $('road-progress').setAttribute('aria-valuenow',String(Math.floor(s.distance)));
+  $('landmark').textContent=current.name.toUpperCase();
+  $('weather').textContent=next?`${next.name.toUpperCase()} · ${Math.ceil(next.mile-s.distance)} MI`:'THE LIGHTS OF HAVEN';
+  $('resources').innerHTML=vitals(s);$('broadcast').textContent=s.broadcast||'The receiver hisses. Nobody is listening.';
+  $('pace').value=s.pace;$('ration').value=s.ration;
+  renderDecision(s);drawScene($('scene'),s,0);
+}
+function reset(){if(!window.confirm('Leave this run behind? The current save will be lost.'))return;clear();state=null;document.body.classList.remove('is-playing');$('game').hidden=true;$('welcome').hidden=false;$('continue').hidden=true;window.scrollTo({top:0,behavior:'instant'});}
+function openPanel(panel){if(!state)return;lastModal=panel;renderDialog(panel);$('tool-dialog').showModal();}
+function renderDialog(panel){if(!state)return;const s=state;
+  const titles={crew:'THE CREW',map:'ROAD ATLAS',trade:'ROADSIDE TRADER',journal:'THE JOURNAL',radio:'SHORTWAVE RADIO'};
+  $('dialog-title').textContent=titles[panel]||panel;
+  let body='';
+  if(panel==='crew'){
+    body='<p class="dialog-intro">Five survivors. Five specialities. Every death costs more than a number.</p><div class="crew-list">'+s.crew.map((c,i)=>`<div class="crew-person"><div><strong>${html(c.name)}</strong><small>${html(c.role||ROLES[i].role)} · ${html(ROLES[i].perk)}</small></div><div class="health ${c.health<=0?'dead':''}">${c.health>0?`${c.health}% HP`:'DEAD'}</div></div>`).join('')+'</div>';
+  }else if(panel==='map'){
+    const {next}=getLandmark(s.distance);
+    body=`<p class="dialog-intro">${Math.floor(s.distance)} of ${DESTINATION} miles. Maps lie. Distances don't.</p><div class="track-list">`+LANDMARKS.map(l=>`<div class="track-stop ${s.distance>=l.mile?'visited':next===l?'next':''}"><span><strong>${html(l.name)}</strong><br><small>${html(l.description)}</small></span><small>${l.mile} MI</small></div>`).join('')+'</div>';
+  }else if(panel==='trade'){
+    body=`<p class="dialog-intro">A trader, a dust-covered ledger and prices set by people with absolutely no shame. ${s.pending!==null?'Finish the current encounter before doing business.':''}</p><div class="credit-balance">YOUR CREDITS: ${s.credits}</div><div class="goods-list">`+
+      Object.entries(GOODS).map(([key,g])=>{const price=getPrice(s,key);return `<div class="good"><div><h3>${html(g.label)}</h3><p>+${g.amount} units</p></div><button type="button" data-buy="${key}" ${s.pending!==null||!!s.end||s.credits<price?'disabled':''}>BUY / ${price} CR</button></div>`;}).join('')+'</div>';
+  }else if(panel==='journal'){
+    body='<p class="dialog-intro">A collection of questionable choices, injuries and minor miracles. Future historians are going to hate you.</p><ol class="journal-list">'+s.log.map(x=>`<li><time>DAY ${String(x.day).padStart(2,'0')}</time><p>${html(x.message)}</p></li>`).join('')+'</ol>';
+  }else if(panel==='radio'){
+    body=`<p class="dialog-intro">One radio, a thousand frequencies, approximately zero competent authorities. You can scan once each day.</p><div class="radio-report">${html(s.broadcast||'Radio silence.')}</div><p class="radio-hint">${s.lastRadioDay===s.day?'Frequency scanned today. Try another day.':'Tuning may reveal a new transmission. No guarantee of useful advice.'}</p><button type="button" class="radio-button" data-tune="true" ${s.lastRadioDay===s.day||s.pending!==null||!!s.end?'disabled':''}>SCAN THE SHORTWAVE</button><div class="radio-hint" style="margin-top:18px"><label><input type="checkbox" id="sound-toggle" ${soundEnabled?'checked':''}> Enable tiny original sound effects</label></div>`;
+  }
+  $('dialog-content').innerHTML=body;
+}
+function animate(t){if(!document.hidden&&t-lastFrame>110){lastFrame=t;const s=state||{distance:30,day:1};const c=state?$('scene'):$('intro-canvas');drawScene(c,s,t);}requestAnimationFrame(animate);}
+const reduce=window.matchMedia('(prefers-reduced-motion: reduce)');if(!reduce.matches)requestAnimationFrame(animate);
 $('start').addEventListener('click',start);
-$('continue').addEventListener('click',()=>{const s=load();if(s)play(s);});
-$('again').addEventListener('click',()=>{clearSave();$('game').hidden=true;document.body.classList.remove('is-playing');$('welcome').hidden=false;$('continue').hidden=true;state=null;window.scrollTo(0,0);});
-$('new-run').addEventListener('click',()=>{if(window.confirm('Abandon this journey and begin a new run?')){$('again').click();}});
-$('game').addEventListener('click',e=>{const button=e.target.closest('button');if(!button)return;if(button.dataset.act)update(button.dataset.act);if(button.dataset.buy)update('buy',{item:button.dataset.buy});if(button.dataset.choice!==undefined)update('choose',{index:Number(button.dataset.choice)});});
+$('continue').addEventListener('click',()=>{const s=loaded();if(s)play(s);});
+$('new-run').addEventListener('click',reset);
+$('home-link').addEventListener('click',e=>{e.preventDefault();if(state)reset();else window.scrollTo({top:0,behavior:'smooth'});});
+$('game').addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.panel)openPanel(b.dataset.panel);
+  if(b.dataset.act)update(b.dataset.act);
+  if(b.dataset.choice!==undefined)update('choose',{index:Number(b.dataset.choice)});
+  if(b.dataset.reset)reset();
+});
+$('tool-dialog').addEventListener('click',e=>{
+  const b=e.target.closest('button');
+  if(b?.dataset.buy){const key=b.dataset.buy;update('buy',{item:key});}
+  if(b?.dataset.tune){update('tune');}
+  if(e.target.id==='sound-toggle'){soundEnabled=e.target.checked;try{localStorage.setItem(SOUND_KEY,String(soundEnabled));}catch{}if(soundEnabled)cue('reward');}
+});
+$('close-dialog').addEventListener('click',()=>$('tool-dialog').close());
+$('tool-dialog').addEventListener('click',e=>{if(e.target===$('tool-dialog'))$('tool-dialog').close();});
 $('pace').addEventListener('change',e=>update('pace',{value:e.target.value}));
 $('ration').addEventListener('change',e=>update('ration',{value:e.target.value}));
-$('continue').hidden=!load();drawScene($('intro-canvas'),30,1,false);
-
-// Show non-essential journey details in a single switchable pane.
-const intelTabs=[...document.querySelectorAll('.intel-tab')];
-const intelPanels=[...document.querySelectorAll('.intel-panel')];
-function showIntelTab(name){
-  for(const button of intelTabs){
-    const active=button.dataset.tab===name;
-    button.setAttribute('aria-pressed',String(active));
+document.addEventListener('keydown',e=>{
+  if(!state || $('tool-dialog').open)return;
+  if(e.altKey||e.ctrlKey||e.metaKey||/^(INPUT|SELECT|TEXTAREA|BUTTON)$/.test(document.activeElement?.tagName||''))return;
+  if(/^[1-5]$/.test(e.key)){
+    const button=$('decision-options').querySelectorAll('button')[Number(e.key)-1];
+    if(button){button.click();e.preventDefault();}
   }
-  for(const panel of intelPanels)panel.hidden=panel.dataset.panel!==name;
-}
-$('intel-tabs').addEventListener('click',event=>{
-  const button=event.target.closest('button[data-tab]');
-  if(button)showIntelTab(button.dataset.tab);
 });
+$('continue').hidden=!loaded();drawScene($('intro-canvas'),{distance:30,day:1},0);
