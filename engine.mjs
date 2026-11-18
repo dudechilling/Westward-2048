@@ -1,107 +1,140 @@
-export const DESTINATION=1250,MAX_DAYS=68;
+import {EVENTS, MILESTONE_EVENTS, RADIO_LINES, ROLES, OBITUARIES} from './story.mjs';
+
+export const DESTINATION=1250;
+export const MAX_DAYS=68;
 export const LANDMARKS=[
-{mile:0,name:'The Departure',description:'Leave the last functioning district behind.'},
-{mile:160,name:'Ashwood Junction',description:'Highways choke beneath abandoned traffic.'},
-{mile:335,name:'The Dry Basin',description:'The reservoirs are empty. The old maps are wrong.'},
-{mile:525,name:'Blackglass Ridge',description:'A wildfire turned the valley into glass and charcoal.'},
-{mile:720,name:'Relay Station Nine',description:'A radio tower still broadcasts a faint signal.'},
-{mile:905,name:'The Broken Pass',description:'An exposed mountain crossing. No safe detour.'},
-{mile:1080,name:'The Green Line',description:'The first living forests in hundreds of miles.'},
-{mile:1250,name:'Haven',description:'The lights ahead are real.'}];
+  {mile:0,name:'The Departure',description:'The last light in the east fades.'},
+  {mile:160,name:'Ashwood Junction',description:'A maze of dead freeways.'},
+  {mile:335,name:'The Dry Basin',description:'Even the reservoir has given up.'},
+  {mile:525,name:'Blackglass Ridge',description:'The hills burned until the earth turned to glass.'},
+  {mile:720,name:'Relay Station Nine',description:'An old transmitter blinks in the dark.'},
+  {mile:905,name:'The Broken Pass',description:'One narrow passage through the mountains.'},
+  {mile:1080,name:'The Green Line',description:'Actual trees. Nobody knows what to say.'},
+  {mile:1250,name:'Haven',description:'The lights ahead are real.'}
+];
 export const GOODS={food:{label:'Rations',price:5,amount:16},water:{label:'Water',price:5,amount:16},fuel:{label:'Fuel',price:9,amount:15},parts:{label:'Spare parts',price:12,amount:1},medicine:{label:'Medicine',price:14,amount:1}};
-export const CREW_NAMES=['Alex','Morgan','Jules','Sam','Riley'];
+export const CREW_NAMES=ROLES.map(x=>x.name);
 const clamp=(n,lo,hi)=>Math.max(lo,Math.min(hi,n));
 function random(s){s.seed=(Math.imul(1664525,s.seed)+1013904223)>>>0;return s.seed/4294967296;}
 function roll(s,lo,hi){return lo+Math.floor(random(s)*(hi-lo+1));}
-function add(s,message,type='info'){s.log.unshift({day:s.day,message,type});s.log=s.log.slice(0,35);}
 function healthy(s){return s.crew.filter(x=>x.health>0);}
+function hasRole(s,name){return s.crew.some(c=>c.name===name&&c.health>0);}
+function add(s,message,type='info'){s.log.unshift({day:s.day,message,type});s.log=s.log.slice(0,45);s.lastReport=message;}
 function morale(s,n){s.morale=clamp(s.morale+n,0,100);}
-function hurt(s,n){const alive=healthy(s);if(!alive.length)return;const person=alive[roll(s,0,alive.length-1)];person.health=clamp(person.health-n,0,100);add(s,person.health?`${person.name} was injured (-${n} health).`:`${person.name} did not survive.`,person.health?'warning':'danger');}
-function healAll(s,n){for(const member of healthy(s))member.health=clamp(member.health+n,0,100);}
-function spendDay(s,days=1){
-for(let i=0;i<days;i++){
-s.day++;
-const people=healthy(s).length;
-s.food=Math.max(0,s.food-Math.ceil(people*(s.ration==='full'?1.2:s.ration==='lean'?.55:.32)));
-s.water=Math.max(0,s.water-Math.ceil(people*.6));
-if(s.food===0){healAll(s,-7);morale(s,-4);add(s,'No rations left. Hunger is taking its toll.','danger');}
-if(s.water===0){healAll(s,-13);morale(s,-7);add(s,'The water cans are empty. Dehydration is setting in.','danger');}
-if(s.ration==='scarce'&&s.food>0){morale(s,-3);healAll(s,-1);}
-if(s.ration==='full'&&s.food>0)morale(s,1);
-if(s.day>MAX_DAYS){s.end='lost';s.endReason='Winter sealed the mountain passes before your crew reached Haven.';return;}
-if(!healthy(s).length){s.end='lost';s.endReason='No one survived the crossing.';return;}
+function healAll(s,n){for(const c of healthy(s))c.health=clamp(c.health+n,0,100);}
+function hurt(s,n){const alive=healthy(s);if(!alive.length)return;const member=alive[roll(s,0,alive.length-1)];member.health=clamp(member.health-n,0,100);if(member.health>0)add(s,`${member.name} took a hit. ${n} health lost.`, 'warning');else {add(s,OBITUARIES[member.name]||`${member.name} did not make it.`, 'danger');morale(s,-15);}}
+function broadcast(s){s.broadcast=RADIO_LINES[roll(s,0,RADIO_LINES.length-1)];s.lastRadioDay=s.day;return s.broadcast;}
+function spendDay(s,days=1){for(let i=0;i<days;i++){
+  s.day++;
+  const people=healthy(s).length;
+  s.food=Math.max(0,s.food-Math.ceil(people*(s.ration==='full'?1.2:s.ration==='lean'?.55:.32)));
+  s.water=Math.max(0,s.water-Math.ceil(people*.6));
+  if(!s.food){healAll(s,-7);morale(s,-4);add(s,'The rations are gone. Hunger is not a fucking metaphor.','danger');}
+  if(!s.water){healAll(s,-13);morale(s,-7);add(s,'No water left. The road has stopped being funny.','danger');}
+  if(s.ration==='scarce'&&s.food){healAll(s,-1);morale(s,-3);}
+  if(s.ration==='full'&&s.food)morale(s,1);
+  if(s.day>MAX_DAYS){s.end='lost';s.endReason='Winter closed the mountain road. Your convoy never reached Haven.';break;}
+  if(!healthy(s).length){s.end='lost';s.endReason='Nobody survived. The truck was in surprisingly good shape.';break;}
 }}
-const EVENTS=[
-{title:'A voice on the shortwave',text:'A stranger claims the northern road is clear. Your old map disagrees.',choices:[{label:'Trust the broadcast',effect:{distance:42,fuel:-5},message:'The shortcut works, but the engine burns through fuel.'},{label:'Stick to the map',effect:{day:2,morale:-3},message:'The safe route adds two difficult days.'}]},
-{title:'Smoke on the horizon',text:'A wall of smoke is rolling through the valley. You can shelter or push onward.',choices:[{label:'Shelter and seal the vents',effect:{day:2,food:-3},message:'The smoke passes after two days.'},{label:'Drive through',effect:{health:-19,distance:35,morale:-5},message:'You clear the smoke, coughing and exhausted.'}]},
-{title:'Abandoned supply depot',text:'A dark warehouse stands beside the road. Something is moving inside.',choices:[{label:'Search the warehouse',effect:{food:14,parts:1,health:-12},message:'You find sealed rations and a spare alternator. Someone gets hurt.'},{label:'Leave it alone',effect:{morale:2},message:'The depot disappears in the rearview mirror.'}]},
-{title:'The bridge is gone',text:'Only bent pylons remain above a flooded gorge.',choices:[{label:'Build a crossing',effect:{parts:-2,day:2,distance:20},message:'A makeshift crossing holds.'},{label:'Take the long detour',effect:{fuel:-12,day:3},message:'You loop around the gorge over three long days.'}]},
-{title:'Strangers at dusk',text:'Another convoy flags you down. They offer useful directions in exchange for water.',choices:[{label:'Share eight water',effect:{water:-8,morale:12,distance:24},message:'The convoy points you toward a workable backroad.'},{label:'Keep moving',effect:{morale:-4},message:'You drive past without stopping.'}]},
-{title:'Engine trouble',text:'The transmission begins to knock. The vehicle may not survive another climb.',choices:[{label:'Use spare parts',effect:{parts:-1,condition:32},message:'You replace the failing assembly.'},{label:'Patch it with scrap',effect:{day:1,condition:12,health:-8},message:'The repair is rough but holds for now.'}]},
-{title:'The old clinic',text:'A field clinic still has a few sealed medical kits in its cabinets.',choices:[{label:'Salvage the supplies',effect:{medicine:2,day:1},message:'You recover two medical kits.'},{label:'Move on quickly',effect:{distance:18},message:'You leave the clinic behind.'}]},
-{title:'A contested checkpoint',text:'Armed guards demand payment to let the vehicle through.',choices:[{label:'Pay the toll (20 credits)',effect:{credits:-20},message:'The guards wave you through.'},{label:'Take a hidden track',effect:{fuel:-9,condition:-11},message:'The detour is hard on the vehicle.'}]},
-{title:'Cold night, weak signal',text:'Your radio catches a message from Haven: “The western gate remains open.”',choices:[{label:'Give the crew hope',effect:{morale:13},message:'For the first time in days, everyone sleeps easier.'},{label:'Keep expectations low',effect:{morale:2},message:'You note the coordinates without making promises.'}]}
-];
 function apply(s,e){for(const [k,n] of Object.entries(e)){
-if(k==='day')spendDay(s,n);
-else if(k==='health')n<0?hurt(s,-n):healAll(s,n);
-else if(k==='morale')morale(s,n);
-else if(k==='distance')s.distance=clamp(s.distance+n,0,DESTINATION);
-else if(k==='condition')s.condition=clamp(s.condition+n,0,100);
-else if(k in s&&typeof s[k]==='number')s[k]=Math.max(0,s[k]+n);
+  if(k==='day')spendDay(s,n);
+  else if(k==='health')n<0?hurt(s,-n):healAll(s,n);
+  else if(k==='morale')morale(s,n);
+  else if(k==='distance')s.distance=clamp(s.distance+n,0,DESTINATION);
+  else if(k==='condition')s.condition=clamp(s.condition+n,0,100);
+  else if(Object.hasOwn(s,k)&&typeof s[k]==='number'&&k!=='seed'&&k!=='lastRadioDay')s[k]=Math.max(0,s[k]+n);
+  if(s.end)break;
 }}
-function status(s){if(s.end)return s;
-if(!healthy(s).length){s.end='lost';s.endReason='No one survived the crossing.';}
-else if(s.condition<=0){s.end='lost';s.endReason='Your vehicle broke down beyond repair.';}
-else if(s.distance>=DESTINATION){s.distance=DESTINATION;s.end='won';s.endReason=`${healthy(s).length} survivors reached Haven on day ${s.day}.`;add(s,'Through the dust, the lights of Haven appear. You made it.','success');}
-else if(s.day>MAX_DAYS){s.end='lost';s.endReason='Winter sealed the mountain passes.';}
-return s;}
-export function newGame({seed=Date.now()>>>0,callsign='The Last Convoy',difficulty='normal'}={}){
-const s={version:1,seed:seed>>>0,day:1,distance:0,food:180,water:190,fuel:185,parts:4,medicine:3,credits:70,condition:95,morale:78,ration:'lean',pace:'steady',difficulty,callsign:String(callsign).trim().slice(0,28)||'The Last Convoy',crew:CREW_NAMES.map(name=>({name,health:100})),log:[],pending:null,end:null,endReason:''};
-if(difficulty==='hard'){s.food=145;s.water=155;s.fuel=160;s.credits=40;s.parts=3;}
-add(s,'2048. The eastern settlements have gone quiet. Haven is 1,250 miles west.','info');
-add(s,'Your convoy leaves at first light. No rescue is coming.','info');
-return s;}
-export function act(state,action,payload={}){
-const s=structuredClone(state);if(s.end)return s;
-if(s.pending!==null&&action!=='choose')return s;
-switch(action){
-case 'travel':{
-if(s.fuel<5){add(s,'Not enough fuel to travel. Scavenge or trade first.','warning');break;}
-const miles=roll(s,35,58)*(s.pace==='rush'?1.45:s.pace==='cautious'?.72:1);
-const days=s.pace==='cautious'?3:s.pace==='rush'?1:2;
-const fuelCost=Math.ceil(miles/7*(s.pace==='rush'?1.3:1));
-const actual=Math.min(miles,Math.floor(s.fuel/fuelCost*miles),DESTINATION-s.distance);
-const used=Math.max(1,Math.ceil(fuelCost*actual/miles));
-s.fuel=Math.max(0,s.fuel-used);
-s.distance=clamp(s.distance+Math.floor(actual),0,DESTINATION);
-s.condition=clamp(s.condition-roll(s,2,s.pace==='rush'?11:6),0,100);
-spendDay(s,days);
-add(s,`Travelled ${Math.floor(actual)} miles over ${days} ${days===1?'day':'days'}. Used ${used} fuel.`,'info');
-if(!s.end&&s.distance<DESTINATION&&random(s)<(s.pace==='rush'?.58:.43))s.pending=roll(s,0,EVENTS.length-1);
-break;}
-case 'scavenge':{
-spendDay(s,1);const kind=roll(s,0,4),amount=roll(s,16,31);
-const types=['food','water','fuel','credits','parts'];const item=types[kind];const gained=item==='parts'?1:amount;
-s[item]+=gained;
-if(random(s)<.22)hurt(s,roll(s,4,13));
-add(s,`Scavenged ${gained} ${item==='parts'?'spare part':item}.`,'success');break;}
-case 'rest':{spendDay(s,2);healAll(s,12);morale(s,9);add(s,'Made camp for two days. The crew rested and recovered.','success');break;}
-case 'repair':{if(s.parts<1){add(s,'No spare parts left.','warning');break;}s.parts--;spendDay(s,1);s.condition=clamp(s.condition+roll(s,21,31),0,100);add(s,'Repaired the vehicle with one spare part.','success');break;}
-case 'heal':{if(s.medicine<1){add(s,'No medicine left.','warning');break;}s.medicine--;healAll(s,23);add(s,'Used one medical kit to treat the crew.','success');break;}
-case 'buy':{const key=payload.item;const good=GOODS[key];if(!good||s.credits<good.price){add(s,'Not enough credits for the trade.','warning');break;}s.credits-=good.price;s[key]+=good.amount;add(s,`Bought ${good.amount} ${good.label.toLowerCase()} for ${good.price} credits.`,'success');break;}
-case 'ration':{if(['full','lean','scarce'].includes(payload.value))s.ration=payload.value;break;}
-case 'pace':{if(['cautious','steady','rush'].includes(payload.value))s.pace=payload.value;break;}
-case 'choose':{
-if(s.pending===null)break;const event=EVENTS[s.pending];const choice=event.choices[payload.index];if(!choice)break;
-s.pending=null;
-const effect={...choice.effect};const shortfalls=Object.keys(effect).filter(k=>effect[k]<0&&['parts','water','credits','fuel','food'].includes(k)&&s[k]<-effect[k]);
-if(shortfalls.length){add(s,`You lacked ${shortfalls.join(', ')}. The plan fell apart.`,'warning');spendDay(s,1);morale(s,-6);break;}
-apply(s,effect);add(s,choice.message,'info');break;}
-default:return s;
+function ending(s){if(s.end)return s;
+  if(!healthy(s).length){s.end='lost';s.endReason='Five people left the east. Nobody finished the sentence.';}
+  else if(s.condition<=0){s.end='lost';s.endReason='The truck died in the middle of nowhere. Warranty expired along with the country.';}
+  else if(s.distance>=DESTINATION){s.distance=DESTINATION;s.end='won';const count=healthy(s).length;
+    s.endReason=count===5?'All five make it to Haven. The gates open. The first thing you see is a sign about property taxes.':count===1?'One survivor reaches Haven. You made it, but there is nobody left to tell the story.':`${count} survivors reach Haven. A warm light, a bowl of soup, and too many empty seats.`;
+    add(s,'The lights are real. Haven is real. There is still a fucking homeowners association.','success');
+  }else if(s.day>MAX_DAYS){s.end='lost';s.endReason='The mountains closed for winter. Haven stays a rumour.';}
+  return s;}
+function hydrate(s){
+  if(!Array.isArray(s.seen))s.seen=[];
+  if(!Array.isArray(s.checkpointSeen))s.checkpointSeen=[];
+  if(typeof s.broadcast!=='string')s.broadcast='Radio silence. Even the static sounds tired.';
+  if(!Number.isInteger(s.lastRadioDay))s.lastRadioDay=0;
+  if(typeof s.lastReport!=='string')s.lastReport=s.log?.[0]?.message||'';
+  for(let i=0;i<s.crew.length;i++)if(!s.crew[i].role)s.crew[i].role=ROLES[i]?.role||'Survivor';
+  return s;
 }
-return status(s);}
-export function getEvent(state){return state.pending===null?null:EVENTS[state.pending]||null;}
-export function getLandmark(distance){let current=LANDMARKS[0],next=null;for(const l of LANDMARKS){if(l.mile<=distance)current=l;else{next=l;break;}}return {current,next};}
+export function newGame({seed=Date.now()>>>0,callsign='The Last Convoy',difficulty='normal'}={}){
+  const s={version:1,seed:seed>>>0,day:1,distance:0,food:180,water:190,fuel:185,parts:4,medicine:3,credits:70,condition:95,morale:78,ration:'lean',pace:'steady',difficulty,callsign:String(callsign).trim().slice(0,28)||'The Last Convoy',crew:ROLES.map(x=>({name:x.name,role:x.role,health:100})),log:[],pending:null,end:null,endReason:'',seen:[],checkpointSeen:[],broadcast:'RADIO // THE EASTERN FREQUENCIES ARE DARK. WESTWARD IS THE ONLY DIRECTION LEFT.',lastRadioDay:0,lastReport:''};
+  if(difficulty==='hard'){s.food=145;s.water=155;s.fuel=160;s.credits=40;s.parts=3;}
+  add(s,'The five of you leave at first light. No rescue. No refunds.','info');
+  return s;
+}
+export function getPrice(s,item){const good=GOODS[item];if(!good)return Infinity;return hasRole(s,'Riley')?Math.max(1,good.price-1):good.price;}
+export function getEvent(s){if(s.pending===null||s.pending===undefined)return null;
+  if(typeof s.pending==='number')return EVENTS[s.pending]||null;
+  if(typeof s.pending==='string'&&s.pending.startsWith('milestone:'))return MILESTONE_EVENTS.find(e=>e.mile===Number(s.pending.slice(10)))||null;
+  return null;
+}
+export function getChoiceForecast(s,choice){const missing=Object.entries(choice.effect).filter(([k,n])=>n<0&&['parts','water','credits','fuel','food','medicine'].includes(k)&&s[k]<-n).map(([k,n])=>`${-n} ${k}`);return {affordable:missing.length===0,missing};}
+export function act(state,action,payload={}){
+  if(!validateSave(state))return state;
+  const s=hydrate(structuredClone(state));if(s.end)return s;
+  if(s.pending!==null&&action!=='choose')return s;
+  switch(action){
+    case 'travel':{
+      if(s.fuel<5){add(s,'Not enough fuel to move. Scavenge or trade first.','warning');break;}
+      const previous=s.distance;
+      const miles=roll(s,35,58)*(s.pace==='rush'?1.45:s.pace==='cautious'?.72:1);
+      const days=s.pace==='cautious'?3:s.pace==='rush'?1:2;
+      const base=Math.ceil(miles/7*(s.pace==='rush'?1.3:1));
+      const cost=Math.max(1,base-(hasRole(s,'Sam')?Math.max(1,Math.floor(base*.1)):0));
+      const actual=Math.min(miles,Math.floor(s.fuel/cost*miles),DESTINATION-s.distance);
+      const used=Math.max(1,Math.ceil(cost*actual/miles));
+      s.fuel=Math.max(0,s.fuel-used);
+      s.distance=clamp(s.distance+Math.floor(actual),0,DESTINATION);
+      s.condition=clamp(s.condition-roll(s,2,s.pace==='rush'?11:6),0,100);
+      spendDay(s,days);
+      add(s,`${Math.floor(actual)} miles west. ${days} ${days===1?'day':'days'} on the road, ${used} fuel burned.`, 'info');
+      if(!s.end&&s.distance<DESTINATION){
+        const checkpoint=MILESTONE_EVENTS.find(e=>e.mile>previous&&e.mile<=s.distance&&!s.checkpointSeen.includes(e.mile));
+        if(checkpoint){s.pending=`milestone:${checkpoint.mile}`;s.checkpointSeen.push(checkpoint.mile);}
+        else if(random(s)<(s.difficulty==='hard'?.62:s.pace==='rush'?.62:.5)){
+          const candidates=EVENTS.map((e,i)=>({e,i})).filter(x=>!s.seen.includes(x.e.id));
+          s.pending=(candidates.length?candidates:EVENTS.map((e,i)=>({e,i})))[roll(s,0,(candidates.length||EVENTS.length)-1)].i;
+        }
+        if(random(s)<.42)broadcast(s);
+      }
+      break;}
+    case 'scavenge':{
+      spendDay(s,1);if(s.end)break;
+      const kind=roll(s,0,4),amount=roll(s,16,31);
+      const types=['food','water','fuel','credits','parts'];const item=types[kind];const gained=item==='parts'?1:amount+(hasRole(s,'Alex')?5:0);
+      s[item]+=gained;
+      if(random(s)<.22)hurt(s,roll(s,4,13));
+      add(s,`Scavenged ${gained} ${item==='parts'?'spare part':item}. The world gives with one hand and slaps with the other.`, 'success');
+      break;}
+    case 'rest':{spendDay(s,2);if(s.end)break;healAll(s,12);morale(s,9);add(s,'Two days of rest. For a brief moment, nobody had to be brave.','success');break;}
+    case 'repair':{if(s.parts<1){add(s,'No spare parts left.','warning');break;}s.parts--;spendDay(s,1);if(s.end)break;s.condition=clamp(s.condition+roll(s,21,31)+(hasRole(s,'Jules')?8:0),0,100);add(s,'The truck is repaired. Jules wants to name the alternator.','success');break;}
+    case 'heal':{if(s.medicine<1){add(s,'The medical kit is empty.','warning');break;}s.medicine--;healAll(s,23+(hasRole(s,'Morgan')?9:0));add(s,'Wounds cleaned. Medicine administered. Nobody enjoyed the experience.','success');break;}
+    case 'buy':{const key=payload.item;const good=GOODS[key];if(!good||s.credits<getPrice(s,key)){add(s,'Not enough credits for the trade.','warning');break;}const price=getPrice(s,key);s.credits-=price;s[key]+=good.amount;add(s,`Bought ${good.amount} ${good.label.toLowerCase()} for ${price} credits.`, 'success');break;}
+    case 'ration':{if(['full','lean','scarce'].includes(payload.value))s.ration=payload.value;break;}
+    case 'pace':{if(['cautious','steady','rush'].includes(payload.value))s.pace=payload.value;break;}
+    case 'tune':{if(s.lastRadioDay===s.day){add(s,'Only static. Try again after the next day.','info');break;}add(s,broadcast(s),'info');break;}
+    case 'choose':{
+      const event=getEvent(s);if(!event)return s;const choice=event.choices[payload.index];if(!choice)return s;
+      s.pending=null;
+      if(!s.seen.includes(event.id))s.seen.push(event.id);
+      const forecast=getChoiceForecast(s,choice);
+      if(!forecast.affordable){spendDay(s,1);morale(s,-6);add(s,`You lacked ${forecast.missing.join(', ')}. The plan fell apart.`, 'warning');break;}
+      apply(s,choice.effect);add(s,choice.message,'info');break;
+    }
+    default:return s;
+  }
+  return ending(s);
+}
+export function getLandmark(distance){let current=LANDMARKS[0],next=null;for(const landmark of LANDMARKS){if(landmark.mile<=distance)current=landmark;else{next=landmark;break;}}return {current,next};}
 export function getScore(s){return Math.max(0,Math.round(s.distance/5+healthy(s).length*100+s.morale*2+s.condition*2+(MAX_DAYS-s.day)*5+(s.end==='won'?500:0)));}
-export function validateSave(s){return !!(s&&s.version===1&&Number.isInteger(s.seed)&&Number.isFinite(s.distance)&&s.distance>=0&&s.distance<=DESTINATION&&Array.isArray(s.crew)&&s.crew.length===5&&s.crew.every(c=>typeof c.name==='string'&&Number.isFinite(c.health))&&Number.isInteger(s.day)&&s.day>=1&&Array.isArray(s.log)&&(s.pending===null||Number.isInteger(s.pending)&&s.pending>=0&&s.pending<EVENTS.length));}
+export function validateSave(s){
+  const validPending=s?.pending===null || (Number.isInteger(s?.pending)&&s.pending>=0&&s.pending<EVENTS.length) ||
+    (typeof s?.pending==='string'&&MILESTONE_EVENTS.some(e=>s.pending===`milestone:${e.mile}`));
+  return !!(s&&s.version===1&&Number.isInteger(s.seed)&&Number.isFinite(s.distance)&&s.distance>=0&&s.distance<=DESTINATION&&Array.isArray(s.crew)&&s.crew.length===5&&s.crew.every(c=>typeof c.name==='string'&&Number.isFinite(c.health)&&c.health>=0&&c.health<=100)&&Number.isInteger(s.day)&&s.day>=1&&Array.isArray(s.log)&&validPending);
+}
