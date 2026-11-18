@@ -11,6 +11,7 @@ on:
       - "scene.mjs"
       - "style.css"
       - "engine.test.mjs"
+      - "scene.test.mjs"
       - "package.json"
       - ".github/workflows/pages.yml"
   workflow_dispatch:

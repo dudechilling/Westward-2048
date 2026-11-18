@@ -25,7 +25,7 @@ Then open `http://localhost:8000`. The game also runs as a static GitHub Pages s
 
 Five crew members have different specialties, with mechanical effects. The story includes 34 original roadside incidents, six landmark encounters and 18 shortwave broadcasts. Encounters are weighted towards fresh, unplayed situations until the pool is exhausted. The game has two difficulty settings and stores its autosave and best score in the current browser. Older version-1 saves remain supported.
 
-The entire playable game uses HTML, CSS and native browser JavaScript. The procedural pixel artwork and optional short sound effects are generated in code; no external game assets or runtime services are required. Remote Google Fonts are optional; system fallbacks work offline.
+The entire playable game uses HTML, CSS and native browser JavaScript. Its animated pixel-art world includes seven distinct environments, weather and time-of-day variants, multi-layer parallax, vehicle wear, satirical signage, rare ambient moments and illustrated roadside encounters. Original animations are rendered in canvas at a capped frame rate; there are no remote image, video or game-asset dependencies. The scene can be paused at any time, and system reduced-motion preferences disable automatic animation. Optional original sound effects remain off by default. Remote Google Fonts are optional; system fallbacks work offline.
 
 ## Tests
 
@@ -35,7 +35,7 @@ Node.js 20+ is required to execute the tests (no package installation needed):
 npm test
 ```
 
-Tests cover resource invariants, deterministic seeds, wins/losses, story choices, character perks, milestones, old saves and broad run balance. Interactive, layout, screenshot and keyboard checks must also be performed in an actual browser before a release. GitHub Actions runs the engine tests.
+Tests cover resource invariants, deterministic seeds, wins/losses, story choices, character perks, milestones, old saves, biome boundaries and the mapping of all encounters to their art states. Browser verification additionally covers viewport overflow, opening and closing field-manual panels, illustrated event states, motion pause and reduced-motion settings. GitHub Actions runs the Node test suite.
 
 ## Deployment
 

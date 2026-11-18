@@ -12,14 +12,14 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css?v=3.0">
-  <script type="module" src="app.mjs?v=3.0"></script>
+  <link rel="stylesheet" href="style.css?v=4.0">
+  <script type="module" src="app.mjs?v=4.0"></script>
 </head>
 <body>
   <header class="masthead">
     <a href="#" id="home-link" class="brand" aria-label="Westward: 2048, home"><span class="brand-star" aria-hidden="true">✳</span> WESTWARD<span class="brand-colon">:</span><span class="brand-year">2048</span></a>
     <p class="masthead-sub">A VERY BAD ROAD TRIP AT THE END OF THE WORLD</p>
-    <span class="masthead-badge">EST. AFTER THE COLLAPSE</span>
+    <button type="button" id="motion-toggle" class="motion-toggle" aria-pressed="false" aria-label="Pause or resume the animated landscape">PAUSE SCENE</button>
   </header>
   <main>
     <section class="welcome" id="welcome" aria-labelledby="welcome-title">
@@ -43,7 +43,7 @@
       </div>
       <div class="welcome-visual">
         <div class="poster-frame">
-          <canvas id="intro-canvas" width="960" height="540" role="img" aria-label="A patched-up truck on a ruined highway heading toward the red sun over distant mountains"></canvas>
+          <canvas id="intro-canvas" width="960" height="540" role="img" aria-label="An animated original pixel-art post-collapse highway with a travelling convoy"></canvas>
           <div class="poster-banner"><span>THE ROAD DOESN'T CARE.</span><span>YOU SHOULD.</span></div>
         </div>
         <p class="poster-caption">ROAD MAP 001 / 2048  <span>NO REFUNDS. NO RESCUE.</span></p>
@@ -61,7 +61,7 @@
       <div class="expedition">
         <div class="travel-stage">
           <figure class="landscape">
-            <canvas id="scene" width="960" height="540" role="img" aria-label="An original pixel-art view of the convoy crossing the post-apocalyptic landscape"></canvas>
+            <canvas id="scene" width="960" height="540" role="img" aria-label="Animated pixel-art of the current road, weather, and encounter"></canvas>
             <figcaption class="landscape-credit"><strong id="landmark">THE DEPARTURE</strong><span id="weather">RED SKY, LONG ROAD</span></figcaption>
           </figure>
           <div class="vitals" id="resources" aria-label="Convoy supplies and condition"></div>
