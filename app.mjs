@@ -7,7 +7,7 @@ function load(){try{const value=JSON.parse(localStorage.getItem(SAVE));return va
 function save(){try{localStorage.setItem(SAVE,JSON.stringify(state));}catch{}}
 function clearSave(){try{localStorage.removeItem(SAVE);}catch{}}
 function persistBest(){if(!state.end)return;try{const best=Number(localStorage.getItem(BEST))||0;if(getScore(state)>best)localStorage.setItem(BEST,String(getScore(state)));}catch{}}
-function play(s){state=s;$('welcome').hidden=true;$('game').hidden=false;render();window.scrollTo({top:0,behavior:'smooth'});}
+function play(s){state=s;document.body.classList.add('is-playing');$('welcome').hidden=true;$('game').hidden=false;render();window.scrollTo({top:0,behavior:'auto'});}
 function update(action,payload){state=act(state,action,payload);save();persistBest();render();}
 function start(){play(newGame({callsign:$('callsign').value,difficulty:$('difficulty').value}));save();}
 function render(){
@@ -28,6 +28,7 @@ $('crew').innerHTML=s.crew.map(person=>`<div class="crew-row"><strong>${esc(pers
 $('credits').textContent=s.credits;
 $('shop').innerHTML=Object.entries(GOODS).map(([key,g])=>`<div class="shop-row"><span>${esc(g.label)}<small>+${g.amount} UNITS</small></span><button data-buy="${key}" ${s.credits<g.price||s.end||s.pending!==null?'disabled':''}>${g.price} CR · BUY</button></div>`).join('');
 $('route').innerHTML=LANDMARKS.map(place=>`<div class="route-row ${s.distance>=place.mile?'visited':next===place?'next':''}"><span>${s.distance>=place.mile?'◆':next===place?'◇':'·'} ${esc(place.name)}</span><span>${place.mile} MI</span></div>`).join('');
+  $('latest-report').textContent=s.log[0]?`DAY ${String(s.log[0].day).padStart(2,'0')} // ${s.log[0].message}`:'';
 $('log').innerHTML=s.log.slice(0,15).map(item=>`<li><time>DAY ${String(item.day).padStart(2,'0')}</time><span class="${item.type}">${esc(item.message)}</span></li>`).join('');
 const e=getEvent(s);$('encounter').hidden=!e;$('actions').hidden=!!e||!!s.end;$('ending').hidden=!s.end;
 if(e){$('event-title').textContent=e.title;$('event-text').textContent=e.text;$('event-choices').innerHTML=e.choices.map((ch,i)=>`<button data-choice="${i}">${esc(ch.label)} →</button>`).join('');}
@@ -53,9 +54,24 @@ ctx.fillStyle='#f2f0d5';ctx.font='700 13px monospace';ctx.fillText(`WESTWARD // 
 }
 $('start').addEventListener('click',start);
 $('continue').addEventListener('click',()=>{const s=load();if(s)play(s);});
-$('again').addEventListener('click',()=>{clearSave();$('game').hidden=true;$('welcome').hidden=false;$('continue').hidden=true;state=null;window.scrollTo(0,0);});
+$('again').addEventListener('click',()=>{clearSave();$('game').hidden=true;document.body.classList.remove('is-playing');$('welcome').hidden=false;$('continue').hidden=true;state=null;window.scrollTo(0,0);});
 $('new-run').addEventListener('click',()=>{if(window.confirm('Abandon this journey and begin a new run?')){$('again').click();}});
 $('game').addEventListener('click',e=>{const button=e.target.closest('button');if(!button)return;if(button.dataset.act)update(button.dataset.act);if(button.dataset.buy)update('buy',{item:button.dataset.buy});if(button.dataset.choice!==undefined)update('choose',{index:Number(button.dataset.choice)});});
 $('pace').addEventListener('change',e=>update('pace',{value:e.target.value}));
 $('ration').addEventListener('change',e=>update('ration',{value:e.target.value}));
 $('continue').hidden=!load();drawScene($('intro-canvas'),30,1,false);
+
+// Show non-essential journey details in a single switchable pane.
+const intelTabs=[...document.querySelectorAll('.intel-tab')];
+const intelPanels=[...document.querySelectorAll('.intel-panel')];
+function showIntelTab(name){
+  for(const button of intelTabs){
+    const active=button.dataset.tab===name;
+    button.setAttribute('aria-pressed',String(active));
+  }
+  for(const panel of intelPanels)panel.hidden=panel.dataset.panel!==name;
+}
+$('intel-tabs').addEventListener('click',event=>{
+  const button=event.target.closest('button[data-tab]');
+  if(button)showIntelTab(button.dataset.tab);
+});
