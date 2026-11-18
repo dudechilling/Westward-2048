@@ -9,7 +9,7 @@
   <meta property="og:type" content="website">
   <meta name="description" content="Westward: 2048 — a free retro post-apocalyptic survival journey. Five survivors, one battered vehicle, 1,250 miles to Haven.">
   <title>WESTWARD: 2048 — The world ended. The journey didn't.</title>
-  <link rel="stylesheet" href="style.css?v=responsive-1">
+  <link rel="stylesheet" href="style.css?v=dashboard-2">
   <script type="module" src="app.mjs"></script>
 </head>
 <body>
@@ -40,9 +40,24 @@
           <div id="encounter" class="encounter" hidden aria-live="polite"><span class="eyebrow">INCOMING TRANSMISSION // DECISION REQUIRED</span><h3 id="event-title"></h3><p id="event-text"></p><div id="event-choices" class="choice-list"></div></div>
           <div id="ending" class="ending" hidden aria-live="polite"><p class="eyebrow">JOURNEY COMPLETE</p><h3 id="ending-title"></h3><p id="ending-message"></p><p id="ending-score"></p><button id="again" class="button primary">TRY ANOTHER RUN →</button></div>
           <div id="actions" class="actions-panel"><div class="panel-head"><h3>YOUR NEXT MOVE</h3><span>EVERY CHOICE COSTS SOMETHING</span></div><div class="actions-grid"><button data-act="travel" class="action travel"><strong>DRIVE WEST →</strong><small>Advance toward Haven</small></button><button data-act="scavenge" class="action"><strong>SCAVENGE</strong><small>Search for supplies • 1 day</small></button><button data-act="rest" class="action"><strong>MAKE CAMP</strong><small>Recover health • 2 days</small></button><button data-act="repair" class="action"><strong>REPAIR</strong><small>Spend 1 part • 1 day</small></button><button data-act="heal" class="action"><strong>USE MEDICINE</strong><small>Spend 1 medical kit</small></button></div><div class="setting-grid"><label>TRAVEL PACE<select id="pace"><option value="cautious">CAUTIOUS — Slow, safe</option><option value="steady">STEADY — Balanced</option><option value="rush">PUSH HARD — Fast, risky</option></select></label><label>FOOD RATIONS<select id="ration"><option value="full">FULL — Better spirits</option><option value="lean">LEAN — Balanced</option><option value="scarce">SCARCE — Save supplies</option></select></label></div></div>
-          <section class="log-panel"><div class="panel-head"><h3>THE JOURNEY LOG</h3><span>LAST REPORTS</span></div><ol id="log" aria-live="polite"></ol></section>
+          <p class="latest-report" id="latest-report" role="status" aria-live="polite">Your convoy leaves at first light.</p>
         </div>
-        <aside class="sidebar"><section class="side-panel"><div class="panel-head"><h3>SUPPLIES</h3><span>LIVE STATUS</span></div><div id="resources" class="resources"></div></section><section class="side-panel"><div class="panel-head"><h3>CREW</h3><span>KEEP THEM ALIVE</span></div><div id="crew"></div></section><section class="side-panel"><div class="panel-head"><h3>THE TRADER</h3><span>ROAD EXCHANGE</span></div><p class="trade-note">Credits: <strong id="credits">0</strong> · Supply prices never change.</p><div id="shop"></div></section><section class="side-panel map-panel"><div class="panel-head"><h3>ROUTE INTEL</h3><span>1,250 MILES</span></div><div id="route"></div></section></aside>
+        <aside class="sidebar" aria-label="Convoy status">
+          <section class="side-panel supplies-panel"><div class="panel-head"><h3>SUPPLIES</h3><span>LIVE STATUS</span></div><div id="resources" class="resources"></div></section>
+          <section class="side-panel crew-panel"><div class="panel-head"><h3>CREW</h3><span>KEEP THEM ALIVE</span></div><div id="crew"></div></section>
+        </aside>
+        <section class="intel-column" aria-label="Journey information">
+          <nav class="intel-tabs" id="intel-tabs" aria-label="Journey information views">
+            <button class="intel-tab" type="button" data-tab="trade" aria-pressed="true">TRADE</button>
+            <button class="intel-tab" type="button" data-tab="route" aria-pressed="false">ROUTE</button>
+            <button class="intel-tab" type="button" data-tab="log" aria-pressed="false">LOG</button>
+          </nav>
+          <div class="intel-panels">
+            <section class="side-panel intel-panel" data-panel="trade"><div class="panel-head"><h3>THE TRADER</h3><span>ROAD EXCHANGE</span></div><p class="trade-note">Credits: <strong id="credits">0</strong> · Supply prices never change.</p><div id="shop"></div></section>
+            <section class="side-panel intel-panel map-panel" data-panel="route" hidden><div class="panel-head"><h3>ROUTE INTEL</h3><span>1,250 MILES</span></div><div id="route"></div></section>
+            <section class="log-panel intel-panel" data-panel="log" hidden><div class="panel-head"><h3>THE JOURNEY LOG</h3><span>LAST REPORTS</span></div><ol id="log" aria-live="polite"></ol></section>
+          </div>
+        </section>
       </div>
     </section>
   </main>
