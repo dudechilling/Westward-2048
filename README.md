@@ -1,47 +1,50 @@
-# WESTWARD: 2048
+# Westward: 2048
 
-**The world ended. The journey didn't.**
+**Go west. Or get buried.**
 
-An original, free browser survival game inspired by the decisions and difficulty of classic overland journey games. In 2048, five survivors travel 1,250 miles through a collapsed North America toward a rumoured safe settlement called Haven.
+A free, original browser-based survival adventure. Five survivors take a patched-up truck through a collapsed North America, 1,250 miles to a place called Haven. The world is deadly, the radio is unreliable, and the jokes are worse.
 
-## Play
+## Play locally
 
-This is a static website. Serve the repository with an HTTP server:
+Requires a static HTTP server. For example:
 
 ```sh
 python3 -m http.server 8000
 ```
 
-Open `http://localhost:8000`, enter a convoy name, select a difficulty and choose **Begin the Journey**. Do not open `index.html` directly with `file://`: browser module imports require an HTTP server.
+Then open `http://localhost:8000`. The game also runs as a static GitHub Pages site, without a backend or account.
 
-## Game features
+## How to play
 
-- Original retro-style canvas scenery and responsive desktop/mobile layout
-- Route landmarks, randomized encounters and two-way consequential decisions
-- Five survivors with health, morale and permanent losses
-- Fuel, food, water, medicine, spare parts, vehicle condition and credits
-- Adjustable travel pace and food rationing
-- Scavenging, resting, repairs, medicine and roadside trading
-- Two difficulty levels, victory and defeat states, and local best scores
-- Autosave to browser localStorage; no login, account or backend
-- Deterministic random seeds for testable game mechanics
+- **Drive west** while watching fuel, water, rations, vehicle condition and crew morale.
+- **Choose** how to survive roadside incidents, with visible resource trade-offs.
+- **Scavenge**, repair the truck, use medicine or rest when the situation deteriorates.
+- **Adjust** travel pace and rations for the risk and time remaining.
+- **Visit** the Crew, Atlas, Trade, Journal and Radio views when you need more information.
+- **Survive** the route to Haven before winter closes the pass. You cannot save everybody every time.
 
-## Development
+Five crew members have different specialties, with mechanical effects. The story includes 34 original roadside incidents, six landmark encounters and 18 shortwave broadcasts. Encounters are weighted towards fresh, unplayed situations until the pool is exhausted. The game has two difficulty settings and stores its autosave and best score in the current browser. Older version-1 saves remain supported.
 
-Requires Node.js 20 or later. No `npm install` is necessary.
+The entire playable game uses HTML, CSS and native browser JavaScript. The procedural pixel artwork and optional short sound effects are generated in code; no external game assets or runtime services are required. Remote Google Fonts are optional; system fallbacks work offline.
+
+## Tests
+
+Node.js 20+ is required to execute the tests (no package installation needed):
 
 ```sh
 npm test
 ```
 
-The source consists of `index.html` (interface), `style.css` (visual design), `app.mjs` (browser controller and pixel scenery) and `engine.mjs` (simulation). Unit tests and seed-based playthrough checks are in `engine.test.mjs`.
+Tests cover resource invariants, deterministic seeds, wins/losses, story choices, character perks, milestones, old saves and broad run balance. Interactive, layout, screenshot and keyboard checks must also be performed in an actual browser before a release. GitHub Actions runs the engine tests.
 
-## Hosting
+## Deployment
 
-Deploy the repository root as a **static website** on Cloudflare Pages (no build command and no output folder) or a similar host. No server-side services are needed. The repository has **not** been deployed to a live game domain.
+Use the `Publish Westward 2048` GitHub Actions workflow in `.github/workflows/pages.yml`. In repository settings, GitHub Pages must be configured with **Source: GitHub Actions**. The workflow stages the static assets, runs tests and deploys them. After publication the site is available at:
 
-Advertising is **not** implemented. Add an approved ad provider only after the site has real original content, appropriate legal/privacy pages, suitable placements away from interactive controls, and approval from the provider. Do not assume ad revenue without actual traffic.
+https://dudechilling.github.io/Westward-2048/
 
-## Intellectual property
+The game contains profanity, gallows humour and satirical depictions of distress. It is intended for mature audiences. Advertising is not integrated; any future ad network will have its own content and placement requirements.
 
-The game code, narrative, rules and procedural visual art were created for this project. No original *Oregon Trail* game code, text, graphics or audio is redistributed. This repository currently has **no open-source licence** for its own code; choose a licence explicitly before accepting outside contributions or granting reuse rights.
+## Rights
+
+The game is original code, graphics and writing. No original *Oregon Trail* code, text, graphics or audio is distributed. The repository has no open-source licence at present; do not assume permission for third-party redistribution.
