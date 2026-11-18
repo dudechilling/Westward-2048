@@ -7,6 +7,8 @@ on:
       - "index.html"
       - "app.mjs"
       - "engine.mjs"
+      - "story.mjs"
+      - "scene.mjs"
       - "style.css"
       - "engine.test.mjs"
       - "package.json"
@@ -37,10 +39,10 @@ jobs:
           node-version: "22"
       - name: Test simulation
         run: npm test
-      - name: Stage public game files
+      - name: Stage static game
         run: |
           mkdir -p _site
-          cp index.html app.mjs engine.mjs style.css _site/
+          cp index.html app.mjs engine.mjs story.mjs scene.mjs style.css _site/
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
       - name: Upload static site artifact

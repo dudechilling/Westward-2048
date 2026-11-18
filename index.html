@@ -1,66 +1,101 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-CA">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#101914">
-  <meta property="og:title" content="Westward: 2048 — A Post-Apocalyptic Survival Journey">
-  <meta property="og:description" content="Five survivors. One broken world. 1,250 miles to Haven. Play the original, free pixel-art survival game.">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#181e1c">
+  <meta name="description" content="Westward: 2048. Five survivors, a dying truck, and 1,250 miles of bad decisions. A free post-apocalyptic survival game with a very dark sense of humour.">
+  <meta property="og:title" content="Westward: 2048 — Go west. Or get buried.">
+  <meta property="og:description" content="Five survivors. One broken continent. A deeply inappropriate number of corporate survivors.">
   <meta property="og:type" content="website">
-  <meta name="description" content="Westward: 2048 — a free retro post-apocalyptic survival journey. Five survivors, one battered vehicle, 1,250 miles to Haven.">
-  <title>WESTWARD: 2048 — The world ended. The journey didn't.</title>
-  <link rel="stylesheet" href="style.css?v=dashboard-2">
-  <script type="module" src="app.mjs"></script>
+  <title>Westward: 2048 — Go West. Or Get Buried.</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=3.0">
+  <script type="module" src="app.mjs?v=3.0"></script>
 </head>
 <body>
-  <header class="topbar"><div class="brand">WESTWARD<span class="accent">:</span>2048</div><div class="tiny">AN ORIGINAL SURVIVAL JOURNEY <span class="signal">◉ SIGNAL LOST</span></div></header>
-  <main id="app">
-    <section id="welcome" class="welcome">
-      <div class="welcome-inner">
-        <p class="eyebrow">SYSTEM TRANSMISSION // 08.17.2048</p>
-        <h1>THE WORLD ENDED.<br><em>THE JOURNEY DIDN'T.</em></h1>
-        <p class="intro">Civilization stopped answering. Five people. One failing truck. A rumour of safety 1,250 miles west. Make every mile count.</p>
-        <div class="intro-controls">
-          <label for="callsign">CONVOY NAME</label><input id="callsign" maxlength="28" value="The Last Convoy" autocomplete="off">
-          <label for="difficulty">DIFFICULTY</label><select id="difficulty"><option value="normal">SURVIVOR — A hard road</option><option value="hard">WASTELAND — No mercy</option></select>
-          <button id="start" class="button primary">BEGIN THE JOURNEY <span aria-hidden="true">→</span></button>
-          <button id="continue" class="button secondary" hidden>RESUME SAVED JOURNEY</button>
+  <header class="masthead">
+    <a href="#" id="home-link" class="brand" aria-label="Westward: 2048, home"><span class="brand-star" aria-hidden="true">✳</span> WESTWARD<span class="brand-colon">:</span><span class="brand-year">2048</span></a>
+    <p class="masthead-sub">A VERY BAD ROAD TRIP AT THE END OF THE WORLD</p>
+    <span class="masthead-badge">EST. AFTER THE COLLAPSE</span>
+  </header>
+  <main>
+    <section class="welcome" id="welcome" aria-labelledby="welcome-title">
+      <div class="welcome-copy">
+        <span class="issue-stamp">THE LAST HUMAN ROAD TRIP <span aria-hidden="true">/</span> ISSUE 001</span>
+        <h1 id="welcome-title">GO WEST.<br><span>OR GET</span><br>BURIED.</h1>
+        <p class="welcome-deck">It's 2048. The grid is dead, the highways are fucked, and civilization's last useful product is a rumour about a safe town 1,250 miles west.</p>
+        <p class="welcome-detail">Five survivors. One truck. Not enough supplies. Every choice has a price, and the universe has a sick sense of humour.</p>
+        <div class="launch-box">
+          <label for="callsign">NAME YOUR CONVOY</label>
+          <input id="callsign" maxlength="28" value="The Last Convoy" autocomplete="off" spellcheck="false">
+          <label for="difficulty">HOW BAD DO YOU WANT IT?</label>
+          <select id="difficulty">
+            <option value="normal">Survivor · The world is awful</option>
+            <option value="hard">Wasteland · The world hates you personally</option>
+          </select>
+          <button type="button" id="start" class="button button-hero">HIT THE ROAD <span aria-hidden="true">↗</span></button>
+          <button type="button" id="continue" class="button button-outline" hidden>RESUME THE DISASTER</button>
         </div>
-        <p class="micro">FREE TO PLAY • AUTOSAVES LOCALLY • NO ACCOUNT REQUIRED</p>
+        <p class="edition-note">Free to play · Saves in this browser · Mature language · No account</p>
       </div>
-      <div class="welcome-art"><canvas id="intro-canvas" width="640" height="340" aria-label="Pixel art of a lonely truck crossing a post-apocalyptic valley" role="img"></canvas><div class="art-caption">THE ROAD WEST // EST. 2048</div></div>
-    </section>
-    <section id="game" class="game" hidden>
-      <div class="hud"><div><span class="eyebrow">YOUR CONVOY</span><h2 id="convoy-name"></h2></div><div class="hud-right"><span id="day">DAY 01</span><span id="survivors">05 SURVIVORS</span><button id="new-run" class="text-button" title="Start over">NEW RUN</button></div></div>
-      <div class="progress-head"><span id="location">THE DEPARTURE</span><span id="distance">0 / 1,250 MI</span></div>
-      <div class="progress"><div id="progress-bar"></div></div>
-      <div class="play-layout">
-        <div class="play-main">
-          <div class="world"><canvas id="scene" width="720" height="300" aria-label="Retro pixel art of your truck on the road" role="img"></canvas><div class="world-overlay"><span id="landmark">THE DEPARTURE</span><span id="weather">THE LONG ROAD WEST</span></div></div>
-          <div id="encounter" class="encounter" hidden aria-live="polite"><span class="eyebrow">INCOMING TRANSMISSION // DECISION REQUIRED</span><h3 id="event-title"></h3><p id="event-text"></p><div id="event-choices" class="choice-list"></div></div>
-          <div id="ending" class="ending" hidden aria-live="polite"><p class="eyebrow">JOURNEY COMPLETE</p><h3 id="ending-title"></h3><p id="ending-message"></p><p id="ending-score"></p><button id="again" class="button primary">TRY ANOTHER RUN →</button></div>
-          <div id="actions" class="actions-panel"><div class="panel-head"><h3>YOUR NEXT MOVE</h3><span>EVERY CHOICE COSTS SOMETHING</span></div><div class="actions-grid"><button data-act="travel" class="action travel"><strong>DRIVE WEST →</strong><small>Advance toward Haven</small></button><button data-act="scavenge" class="action"><strong>SCAVENGE</strong><small>Search for supplies • 1 day</small></button><button data-act="rest" class="action"><strong>MAKE CAMP</strong><small>Recover health • 2 days</small></button><button data-act="repair" class="action"><strong>REPAIR</strong><small>Spend 1 part • 1 day</small></button><button data-act="heal" class="action"><strong>USE MEDICINE</strong><small>Spend 1 medical kit</small></button></div><div class="setting-grid"><label>TRAVEL PACE<select id="pace"><option value="cautious">CAUTIOUS — Slow, safe</option><option value="steady">STEADY — Balanced</option><option value="rush">PUSH HARD — Fast, risky</option></select></label><label>FOOD RATIONS<select id="ration"><option value="full">FULL — Better spirits</option><option value="lean">LEAN — Balanced</option><option value="scarce">SCARCE — Save supplies</option></select></label></div></div>
-          <p class="latest-report" id="latest-report" role="status" aria-live="polite">Your convoy leaves at first light.</p>
+      <div class="welcome-visual">
+        <div class="poster-frame">
+          <canvas id="intro-canvas" width="960" height="540" role="img" aria-label="A patched-up truck on a ruined highway heading toward the red sun over distant mountains"></canvas>
+          <div class="poster-banner"><span>THE ROAD DOESN'T CARE.</span><span>YOU SHOULD.</span></div>
         </div>
-        <aside class="sidebar" aria-label="Convoy status">
-          <section class="side-panel supplies-panel"><div class="panel-head"><h3>SUPPLIES</h3><span>LIVE STATUS</span></div><div id="resources" class="resources"></div></section>
-          <section class="side-panel crew-panel"><div class="panel-head"><h3>CREW</h3><span>KEEP THEM ALIVE</span></div><div id="crew"></div></section>
-        </aside>
-        <section class="intel-column" aria-label="Journey information">
-          <nav class="intel-tabs" id="intel-tabs" aria-label="Journey information views">
-            <button class="intel-tab" type="button" data-tab="trade" aria-pressed="true">TRADE</button>
-            <button class="intel-tab" type="button" data-tab="route" aria-pressed="false">ROUTE</button>
-            <button class="intel-tab" type="button" data-tab="log" aria-pressed="false">LOG</button>
-          </nav>
-          <div class="intel-panels">
-            <section class="side-panel intel-panel" data-panel="trade"><div class="panel-head"><h3>THE TRADER</h3><span>ROAD EXCHANGE</span></div><p class="trade-note">Credits: <strong id="credits">0</strong> · Supply prices never change.</p><div id="shop"></div></section>
-            <section class="side-panel intel-panel map-panel" data-panel="route" hidden><div class="panel-head"><h3>ROUTE INTEL</h3><span>1,250 MILES</span></div><div id="route"></div></section>
-            <section class="log-panel intel-panel" data-panel="log" hidden><div class="panel-head"><h3>THE JOURNEY LOG</h3><span>LAST REPORTS</span></div><ol id="log" aria-live="polite"></ol></section>
+        <p class="poster-caption">ROAD MAP 001 / 2048  <span>NO REFUNDS. NO RESCUE.</span></p>
+      </div>
+    </section>
+
+    <section class="game" id="game" hidden aria-label="Play Westward 2048">
+      <header class="run-header">
+        <div class="run-identity"><p class="run-eyebrow">EXPEDITION / <span id="chapter">THE DEPARTURE</span></p><h2 id="convoy-name">The Last Convoy</h2></div>
+        <div class="run-figures"><div><span>DAY</span><strong id="day">01 / 68</strong></div><div><span>DISTANCE</span><strong id="distance">0 / 1,250</strong></div><div><span>ALIVE</span><strong id="survivors">5 / 5</strong></div></div>
+        <button type="button" id="new-run" class="new-run">RESTART ↺</button>
+      </header>
+      <div class="road-progress" role="progressbar" aria-label="Journey progress to Haven" aria-valuemin="0" aria-valuemax="1250" aria-valuenow="0" id="road-progress"><div class="progress-line" id="progress-bar"></div></div>
+
+      <div class="expedition">
+        <div class="travel-stage">
+          <figure class="landscape">
+            <canvas id="scene" width="960" height="540" role="img" aria-label="An original pixel-art view of the convoy crossing the post-apocalyptic landscape"></canvas>
+            <figcaption class="landscape-credit"><strong id="landmark">THE DEPARTURE</strong><span id="weather">RED SKY, LONG ROAD</span></figcaption>
+          </figure>
+          <div class="vitals" id="resources" aria-label="Convoy supplies and condition"></div>
+          <div class="shortwave" aria-live="polite"><span class="radio-icon" aria-hidden="true">◉</span><strong>ON THE AIR</strong><p id="broadcast">Only static.</p></div>
+        </div>
+
+        <section class="decision-card" id="decision" aria-live="polite" aria-label="Current decision">
+          <div class="decision-topline"><span id="decision-kind">OPEN ROAD</span><span id="decision-count">2048 / VOL. 01</span></div>
+          <div class="decision-content"><p class="decision-kicker" id="decision-kicker">THE ROAD AHEAD</p><h3 id="decision-title">No one is coming.</h3><p class="decision-copy" id="decision-copy">The truck is running. The world is not. Haven is somewhere west of here.</p></div>
+          <div class="decision-options" id="decision-options"></div>
+          <div class="travel-settings" id="travel-settings">
+            <label for="pace">PACE<select id="pace"><option value="cautious">Cautious · slow and careful</option><option value="steady">Steady · balanced</option><option value="rush">Floor it · fast and dangerous</option></select></label>
+            <label for="ration">RATIONS<select id="ration"><option value="full">Full · fed and happy</option><option value="lean">Lean · just enough</option><option value="scarce">Barely · a terrible idea</option></select></label>
           </div>
+          <p class="latest-report" id="latest-report" role="status" aria-live="polite">The journey begins.</p>
         </section>
       </div>
+
+      <nav class="command-bar" aria-label="Journey tools">
+        <button type="button" data-panel="crew"><span aria-hidden="true">♙</span><strong>CREW</strong><small>Five difficult people</small></button>
+        <button type="button" data-panel="map"><span aria-hidden="true">⌖</span><strong>MAP</strong><small>Where the hell are we?</small></button>
+        <button type="button" data-panel="trade"><span aria-hidden="true">⇄</span><strong>TRADE</strong><small>Supplies and bad deals</small></button>
+        <button type="button" data-panel="journal"><span aria-hidden="true">▤</span><strong>LOG</strong><small>Regrets, in chronological order</small></button>
+        <button type="button" data-panel="radio"><span aria-hidden="true">◉</span><strong>RADIO</strong><small>News nobody asked for</small></button>
+      </nav>
     </section>
   </main>
-  <footer>WESTWARD: 2048 <span>—</span> THE WORLD ENDED. THE JOURNEY DIDN'T. <span>•</span> ORIGINAL GAMEPLAY & ART</footer>
+
+  <dialog id="tool-dialog" class="tool-dialog" aria-labelledby="dialog-title">
+    <div class="dialog-wrap">
+      <header class="dialog-head"><div><p class="dialog-eyebrow">THE FIELD MANUAL</p><h2 id="dialog-title">CREW</h2></div><button type="button" id="close-dialog" class="close-dialog" aria-label="Close panel">✕ CLOSE</button></header>
+      <div class="dialog-content" id="dialog-content"></div>
+    </div>
+  </dialog>
+  <footer class="footer"><span>WESTWARD:2048</span><span>THE WORLD ENDED. YOUR BAD DECISIONS DIDN'T.</span></footer>
 </body>
 </html>
