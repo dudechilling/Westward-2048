@@ -8,7 +8,7 @@ export const LANDMARKS=[
 {mile:905,name:'The Broken Pass',description:'An exposed mountain crossing. No safe detour.'},
 {mile:1080,name:'The Green Line',description:'The first living forests in hundreds of miles.'},
 {mile:1250,name:'Haven',description:'The lights ahead are real.'}];
-export const GOODS={food:{label:'Rations',price:5,amount:6},water:{label:'Water',price:5,amount:6},fuel:{label:'Fuel',price:9,amount:7},parts:{label:'Spare parts',price:12,amount:1},medicine:{label:'Medicine',price:14,amount:1}};
+export const GOODS={food:{label:'Rations',price:5,amount:16},water:{label:'Water',price:5,amount:16},fuel:{label:'Fuel',price:9,amount:15},parts:{label:'Spare parts',price:12,amount:1},medicine:{label:'Medicine',price:14,amount:1}};
 export const CREW_NAMES=['Alex','Morgan','Jules','Sam','Riley'];
 const clamp=(n,lo,hi)=>Math.max(lo,Math.min(hi,n));
 function random(s){s.seed=(Math.imul(1664525,s.seed)+1013904223)>>>0;return s.seed/4294967296;}
@@ -22,8 +22,8 @@ function spendDay(s,days=1){
 for(let i=0;i<days;i++){
 s.day++;
 const people=healthy(s).length;
-s.food=Math.max(0,s.food-Math.ceil(people*(s.ration==='full'?1.2:s.ration==='lean'?.75:.45)));
-s.water=Math.max(0,s.water-Math.ceil(people*.9));
+s.food=Math.max(0,s.food-Math.ceil(people*(s.ration==='full'?1.2:s.ration==='lean'?.55:.32)));
+s.water=Math.max(0,s.water-Math.ceil(people*.6));
 if(s.food===0){healAll(s,-7);morale(s,-4);add(s,'No rations left. Hunger is taking its toll.','danger');}
 if(s.water===0){healAll(s,-13);morale(s,-7);add(s,'The water cans are empty. Dehydration is setting in.','danger');}
 if(s.ration==='scarce'&&s.food>0){morale(s,-3);healAll(s,-1);}
@@ -57,8 +57,8 @@ else if(s.distance>=DESTINATION){s.distance=DESTINATION;s.end='won';s.endReason=
 else if(s.day>MAX_DAYS){s.end='lost';s.endReason='Winter sealed the mountain passes.';}
 return s;}
 export function newGame({seed=Date.now()>>>0,callsign='The Last Convoy',difficulty='normal'}={}){
-const s={version:1,seed:seed>>>0,day:1,distance:0,food:100,water:100,fuel:115,parts:4,medicine:3,credits:70,condition:95,morale:78,ration:'lean',pace:'steady',difficulty,callsign:String(callsign).trim().slice(0,28)||'The Last Convoy',crew:CREW_NAMES.map(name=>({name,health:100})),log:[],pending:null,end:null,endReason:''};
-if(difficulty==='hard'){s.food=80;s.water=85;s.fuel=100;s.credits=40;s.parts=3;}
+const s={version:1,seed:seed>>>0,day:1,distance:0,food:180,water:190,fuel:185,parts:4,medicine:3,credits:70,condition:95,morale:78,ration:'lean',pace:'steady',difficulty,callsign:String(callsign).trim().slice(0,28)||'The Last Convoy',crew:CREW_NAMES.map(name=>({name,health:100})),log:[],pending:null,end:null,endReason:''};
+if(difficulty==='hard'){s.food=145;s.water=155;s.fuel=160;s.credits=40;s.parts=3;}
 add(s,'2048. The eastern settlements have gone quiet. Haven is 1,250 miles west.','info');
 add(s,'Your convoy leaves at first light. No rescue is coming.','info');
 return s;}
@@ -81,7 +81,7 @@ add(s,`Travelled ${Math.floor(actual)} miles over ${days} ${days===1?'day':'days
 if(!s.end&&s.distance<DESTINATION&&random(s)<(s.pace==='rush'?.58:.43))s.pending=roll(s,0,EVENTS.length-1);
 break;}
 case 'scavenge':{
-spendDay(s,1);const kind=roll(s,0,4),amount=roll(s,7,19);
+spendDay(s,1);const kind=roll(s,0,4),amount=roll(s,16,31);
 const types=['food','water','fuel','credits','parts'];const item=types[kind];const gained=item==='parts'?1:amount;
 s[item]+=gained;
 if(random(s)<.22)hurt(s,roll(s,4,13));
